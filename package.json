@@ -1,0 +1,47 @@
+{
+  "name": "ts2md",
+  "version": "0.1.0",
+  "description": "Simple Typescript Documentation Generator to GitHub Compatible MarkDown",
+  "author": "Tone Engel",
+  "license": "Open BSV",
+  "bugs": {
+    "url": "https://github.com/p2ppsr/ts2md/issues"
+  },
+  "homepage": "https://github.com/p2ppsr/ts2md#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p2ppsr/ts2md.git"
+  },
+  "keywords": [
+    "Typescript",
+    "Documentation",
+    "Markdown"
+  ],
+  "main": "./out/src/index.js",
+  "types": "./out/src/index.d.ts",
+  "files": [
+    "out",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc --build",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.4.0",
+    "@types/node": "^18.13.0",
+    "@types/node-fetch": "^2.6.2",
+    "@typescript-eslint/eslint-plugin": "^5.52.0",
+    "@typescript-eslint/parser": "^5.52.0",
+    "eslint": "^8.34.0",
+    "jest": "^29.4.3",
+    "standard": "^16.0.4",
+    "ts-jest": "^29.0.5",
+    "ts-node": "^10.9.1",
+    "ts-standard": "^12.0.2"
+  },
+  "dependencies": {
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  }
+}
