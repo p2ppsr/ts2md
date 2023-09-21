@@ -1,13 +1,24 @@
 import * as fs from "fs";
 import * as path from "path";
 
+/**
+ * Quick and dirty README.md merge function.
+ * 
+ * The anchors must not be indented and must exactly match:
+ * 
+ *    `<!--#region ts2md-api-merged-here-->`
+ * 
+ *    `<!--#endregion ts2md-api-merged-here-->`
+ * 
+ * @param md The markdown to insert between the start and end anchors.
+ */
 export function mdMerge(md: string) {
     const mergePath = path.resolve('./README.md')
 
     const preMergeMd = fs.readFileSync(mergePath, { encoding: 'utf8' })
     
-    const mergeStartAnchor = '<!--#region ts2md-api-merged-here-->'
-    const mergeEndAnchor = '<!--#endregion ts2md-api-merged-here-->'
+    const mergeStartAnchor = '\n<!--#region ts2md-api-merged-here-->'
+    const mergeEndAnchor = '\n<!--#endregion ts2md-api-merged-here-->'
     
     const posStart = preMergeMd.indexOf(mergeStartAnchor)
     const posEnd = preMergeMd.indexOf(mergeEndAnchor)
@@ -19,7 +30,4 @@ export function mdMerge(md: string) {
         try { fs.unlinkSync(mergePath) } catch { /* */ }
         fs.writeFileSync(mergePath, mergedMd)
     }
-
-    
-    console.log('done')
 }

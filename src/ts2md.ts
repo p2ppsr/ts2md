@@ -12,10 +12,38 @@ export interface Ts2MdOptions {
      * Primary typescript source file, default is `./src/index.ts`
      */
     inputFilename: string
+    /**
+     * The heading level for the first generated heading.
+     */
     firstHeadingLevel: 1 | 2 | 3
+    /**
+     * Set to true if generated markdown will be merged into
+     * a file that already includes a containing header.
+     */
     noTitle: boolean
+    /**
+     * If valid, a copy of the generated markdown documentation will be
+     * saved to this file.
+     */
     outputFilename?: string
+    /**
+     * Set to true to attempt to delete an existing output file before
+     * writing new output.
+     */
     outputReplace: boolean
+    /**
+     * Set to true if the generated output should be merged into README.md
+     * 
+     * Currently README.md must exist at `./README.md`
+     * 
+     * and must contain the following merge start and merge end anchors:
+     * 
+     *    `<!--#region ts2md-api-merged-here-->`
+     *
+     *    `<!--#endregion ts2md-api-merged-here-->`
+     *    
+     * The anchors must not be indented.
+     */
     readmeMerge: boolean
 }
 
@@ -167,7 +195,7 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
             const r = getJsDoc(m)
             if (r.jsDoc.length > 0) {
                 addDetailsStart()
-                md += `**${propName}**\n\n`
+                md += `${this.ts2Md.headingLevelMd(5)} ${propName}\n\n`
                 for (const d of r.jsDoc) {
                     if (d['comment']) {
                         md += `${d['comment']}\n\n`
@@ -209,6 +237,7 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
 
     override toMarkDownDetails(docItem: DocItem<ts.FunctionDeclaration>) : string {
         let md = ''
+
         const returnsTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocReturnTag)
             .map(t => t as ts.JSDocReturnTag)
             .filter(t => !!t.comment)
@@ -218,6 +247,17 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
                 const rt = t as ts.JSDocReturnTag
                 md += `${rt.comment}\n\n`
             }
+        }
+        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
+        if (paramTags.length > 0) {
+            md += `<details>\n\n<summary>${this.label} ${docItem.name} Argument Details</summary>\n\n`
+            
+            for (const tag of paramTags) {
+                const name = tag.name.getText(docItem.sf)
+                md += `${this.ts2Md.headingLevelMd(5)} ${name}\n\n${tag.comment}`
+            }
+
+            md += `</details>\n\n`
         }
         return md
     }
@@ -260,22 +300,37 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
             // and remove leading spaces
             while (r.pos > 0 && fromTs[r.pos - 1] === ' ') { r.pos--; r.len++ }
         }
-        if (r.pos > -1)
+        if (r.pos > -1) {
             fromTs = fromTs.slice(0, r.pos) + fromTs.slice(r.pos + r.len)
+            if (fromTs[r.pos] === '\n') {
+                let pos2 = r.pos -1
+                while (pos2 > 0 && fromTs[pos2] === ' ') pos2--
+                if (fromTs[pos2] === '\n') {
+                    // and remove blank line left after original removal
+                    fromTs = fromTs.slice(0, pos2) + fromTs.slice(r.pos)
+                }
+            }
+        }
         return fromTs
     }
+
+    details: Record<string, string> = {}
 
     override toMarkDownTs(docItem: DocItem<ts.ClassDeclaration>) : string {
         const n = docItem.item
         const sf = docItem.sf
         const printer = this.ts2Md.printer
 
+        this.details = {}
+        
         // class definition typescript including all members and function bodies...
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
         for (const ce of n.members) {
             const r = getJsDoc(ce)
+            let isPrivate = false
             if ((ce['modifiers'] && ce['modifiers'].some(m => m.kind === ts.SyntaxKind.PrivateKeyword)) ||
                 r.tags.some(t => ts.isJSDocPrivateTag(t))) {
+                isPrivate = true
                 // Remove entire member
                 const memberts = printer.printNode(ts.EmitHint.Unspecified, ce, sf)
                 mdts = this.removeTs(mdts, memberts, true)
@@ -284,66 +339,44 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
                 const bodyts  = printer.printNode(ts.EmitHint.Unspecified, ce['body'], sf)
                 mdts = this.removeTs(mdts, bodyts)
             }
+            if (!isPrivate && r.jsDoc.length > 0) {
+                // Collect member details
+                let name = ce.name?.getText(docItem.sf) || ''
+                if (ce.kind === ts.SyntaxKind.Constructor) {
+                    name = 'constructor'
+                    // Default value of {}['constructor'] is an object...
+                    if (typeof this.details[name] !== 'string') this.details[name] = ''
+                }
+                let memberDetails = this.details[name] ?? ""
+                for (const d of r.jsDoc) {
+                    if (d['comment']) {
+                        memberDetails += `${d['comment']}\n\n`
+                    }
+                }
+                this.details[name] = memberDetails
+            }
         }
         return mdts
     }
 
     override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>) : string {
-        const n = docItem.item
+        const keys = Object.keys(this.details)
+        if (keys.length < 1) return ''
 
-        let md = ''
-        let detailsStartAdded = false
-        const addDetailsStart = () => {
-            if (!detailsStartAdded) {
-                detailsStartAdded = true
-                md += `<details>\n\n<summary>${this.label} ${docItem.name} Member Details</summary>\n\n`
-            }
-        }
-        const addDetailsEnd = () => {
-            if (detailsStartAdded) {
-                md += `</details>\n\n`
-            }
-        }
+        let md = `<details>\n\n<summary>${this.label} ${docItem.name} Member Details</summary>\n\n`
         
-        for (const m of n.members) {
-            switch (m.kind) {
-                case ts.SyntaxKind.Constructor: {
-                    const n = m as ts.ConstructorDeclaration
-                } break;
-                case ts.SyntaxKind.GetAccessor: {
-                    const n = m as ts.GetAccessorDeclaration
-                } break;
-                case ts.SyntaxKind.SetAccessor: {
-                    const n = m as ts.SetAccessorDeclaration
-                } break;
-                case ts.SyntaxKind.MethodDeclaration: {
-                    const n = m as ts.MethodDeclaration
-                } break;
-                default:
-                    break
-            }
-            /*
-            const ps = m as ts.PropertySignature
-            const propName = (ps.name as ts.Identifier).escapedText
-            const r = getJsDoc(m)
-            if (r.jsDoc.length > 0) {
-                addDetailsStart()
-                md += `**${propName}**\n\n`
-                for (const d of r.jsDoc) {
-                    if (d['comment']) {
-                        md += `${d['comment']}\n\n`
-                    }
-                }
-            }
-            */
+        keys.sort()
+        for (const key of keys) {
+            md += `${this.ts2Md.headingLevelMd(5)} ${key}\n\n${this.details[key]}`
         }
-        addDetailsEnd()
+
+        md += `</details>\n\n`
         return md
     }
 }
 
 /**
- * Use the Typescript compiler to parse source tree given a top level source file such as `index.ts`.
+ * Uses the Typescript compiler to parse source tree given a top level source file such as `index.ts`.
  * 
  * Extract the exported API interfaces, classes, types, functions and variables.
  * 
@@ -382,7 +415,15 @@ export class Ts2Md {
      */
     outputPath?: string
 
+    /**
+     * Construct a new instance configured for `run` method to be called next.
+     * 
+     * @param options Must be provided. inputFilename defaults to `./src/index.ts`
+     */
     constructor(public options: Ts2MdOptions) {
+        
+        options.inputFilename ||= './src/index.ts'
+        
         this.filePath = path.resolve(options.inputFilename)
         this.fileName = path.parse(this.filePath).name
 
@@ -410,7 +451,7 @@ export class Ts2Md {
     }
     
     /**
-     * Genrates the documentation markdown and write's it to output file
+     * Generates the documentation markdown and write's it to output file
      * and/or merges it to README.md
      */
     run() : void {
@@ -425,17 +466,20 @@ export class Ts2Md {
         }
     }
 
+    /**
+     * @private
+     */
     headingLevelMd(relativeLevel: number) : string {
         relativeLevel += this.options.firstHeadingLevel - 1
         if (this.options.noTitle) relativeLevel--
         return '#'.repeat(relativeLevel + this.options.firstHeadingLevel - 1)
     }
 
-    parseSourceFiles(program: ts.Program) : ts.SourceFile[] {
+    private parseSourceFiles(program: ts.Program) : ts.SourceFile[] {
         return program.getSourceFiles().filter(sf => sf.fileName.indexOf('node_modules') === -1)
     }
     
-    extractDocs(sourceFiles: ts.SourceFile[]) : DocBase<ts.Node>[] {
+    private extractDocs(sourceFiles: ts.SourceFile[]) : DocBase<ts.Node>[] {
         let docs: DocBase<ts.Node>[] = [
             new DocInterface(this),
             new DocClass(this),
@@ -460,7 +504,7 @@ export class Ts2Md {
         return docs
     }
     
-    generateMarkDown(docs: DocBase<ts.Node>[]) : string {
+    private generateMarkDown(docs: DocBase<ts.Node>[]) : string {
         let md = ''
 
         if (!this.options.noTitle) {
@@ -496,7 +540,7 @@ export class Ts2Md {
         return md
     }
     
-    generateDocItemLinksTable(doc: DocBase<ts.Node>) : string {
+    private generateDocItemLinksTable(doc: DocBase<ts.Node>) : string {
         let md = ''
 
         const nameLinks = doc.docItems.map(d => ({ name: d.name, linkMd: doc.toMarkDownRefLink(d) }))
@@ -521,7 +565,7 @@ export class Ts2Md {
         return md
     }
     
-    writeMarkDownToOuput(markDown: string, outputFilename: string) : string {
+    private writeMarkDownToOuput(markDown: string, outputFilename: string) : string {
         const outputPath = path.resolve(outputFilename)
         if (this.options.outputReplace) {
             try { fs.unlinkSync(outputPath) } catch { /* */ }
@@ -531,12 +575,37 @@ export class Ts2Md {
         return outputPath
     }
     
-    readmeMerge(markDown: string) {
+    private readmeMerge(markDown: string) {
         mdMerge(markDown)
     }
 
 }
 
+/**
+ * Generate Typescript documentation and merge into README.md
+ * 
+ * Attempts to validate options, constructs an instance of Ts2Md with those options, and runs the generation method.
+ * 
+ * 1. Function argument is used if provided.
+ * 
+ * 2. Looks for `./ts2md.json`
+ * 
+ * 3. Default options.
+ * 
+ * Default options are:
+ *
+ * ```json
+ * {
+ *   "inputFilename": "./src/index.ts",
+ *   "outputFilename": "./apiDoc.md",
+ *   "firstHeadingLevel": 2,
+ *   "noTitle": true,
+ *   "outputReplace": true,
+ *   "readmeMerge": true
+ * }
+ * ```
+ * @publicbody
+ */
 export function ts2md(options?: Ts2MdOptions) : void {
     if (!options) {
         try {
