@@ -1,6 +1,39 @@
 # ts2md
 
-Simple Typescript Documentation in README.md Generator
+Simple Typescript Documentation in `README.md`` Generator
+
+## Installation
+
+```bash
+npm i -D ts2md
+```
+
+## Setup
+
+After installation, use the following command to run markdown generation:
+
+```bash
+npx ts2md
+```
+
+Which will also remind you to add merge anchors in your `README.md` file:
+
+```md
+  <!--#region ts2md-api-merged-here-->
+  <!--#endregion ts2md-api-merged-here-->
+```
+
+The anchors must not be indented where you wish to merge the generated documentation.
+
+You may also want to add a script to `package.json` as a reminder and to support
+automatically updating documentation before publishing your package:
+
+```json
+  "scripts": {
+    "build:readme": "npx ts2md",
+    "prepublish": "npm run build && npx ts2md",
+  }
+```
 
 ## API
 

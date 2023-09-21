@@ -22,12 +22,22 @@ export function mdMerge(md: string) {
     
     const posStart = preMergeMd.indexOf(mergeStartAnchor)
     const posEnd = preMergeMd.indexOf(mergeEndAnchor)
-    
+
     if (posStart > -1 && posEnd > -1 && posStart < posEnd) {
         const mergedMd = preMergeMd.slice(0, posStart + mergeStartAnchor.length) +
          md +
          preMergeMd.slice(posEnd)
         try { fs.unlinkSync(mergePath) } catch { /* */ }
         fs.writeFileSync(mergePath, mergedMd)
+    } else {
+        console.error(`
+ts2md anchors missing or inverted in README.md
+
+Be sure to add exactly:
+
+<!--#region ts2md-api-merged-here-->
+<!--#endregion ts2md-api-merged-here-->
+
+`)
     }
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import * as fs from "fs";
 import * as path from "path";
@@ -616,7 +617,7 @@ export function ts2md(options?: Ts2MdOptions) : void {
     }
     options ||= {
         inputFilename: './src/index.ts',
-        outputFilename: './apiDoc.md',
+        outputFilename: '',
         firstHeadingLevel: 2,
         noTitle: true,
         outputReplace: true,
@@ -625,4 +626,5 @@ export function ts2md(options?: Ts2MdOptions) : void {
     new Ts2Md(options).run()
 }
 
+console.log('running ts2md()')
 ts2md()

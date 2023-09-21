@@ -17,6 +17,9 @@
     "Documentation",
     "Markdown"
   ],
+  "bin": {
+    "ts2md": "./out/src/ts2md.js"
+  },
   "main": "./out/src/index.js",
   "types": "./out/src/index.d.ts",
   "files": [
