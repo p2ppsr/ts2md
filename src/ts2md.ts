@@ -83,7 +83,7 @@ class DocItem<T extends ts.Node> {
 abstract class DocBase<T extends ts.Node> {
     docItems: DocItem<T>[] = []
     
-    constructor(public ts2Md: Ts2Md, public label: string, public labelPlural: string) {
+    constructor(public sup: DocGenSupportApi, public label: string, public labelPlural: string) {
     }
     
     abstract getName(item: T, sf: ts.SourceFile) : string
@@ -95,7 +95,7 @@ abstract class DocBase<T extends ts.Node> {
         
         for (const item of items) {
             const docItem = new DocItem(item, this.getName(item, sf), sf)
-            if (!docItem.isPrivate || this.ts2Md.options.nothingPrivate)
+            if (!docItem.isPrivate || this.sup.nothingPrivate)
                 this.docItems.push(docItem)
         }
     }
@@ -114,9 +114,9 @@ abstract class DocBase<T extends ts.Node> {
      * @returns the generated markdown for this `DocItem`
      */
     toMarkDown(docItem: DocItem<T>) : string {
-       let md = `${this.ts2Md.headingLevelMd(3)} ${this.label}: ${docItem.name}\n\n`
+       let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}\n\n`
        if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
-            md += `${this.ts2Md.headingLevelMd(4)} Description\n\n`
+            md += `${this.sup.headingLevelMd(4)} Description\n\n`
             for (const d of docItem.jsDoc) {
                 if (d['comment'])
                     md += `${d['comment']}\n\n`
@@ -146,7 +146,7 @@ abstract class DocBase<T extends ts.Node> {
      * @returns typescript syntax to be added within a typescript syntax code block for this `DocItem`
      */
     toMarkDownTs(docItem: DocItem<T>) : string {
-        return this.ts2Md.printer.printNode(ts.EmitHint.Unspecified, docItem.item, docItem.sf)
+        return this.sup.printer.printNode(ts.EmitHint.Unspecified, docItem.item, docItem.sf)
     }
 
     /**
@@ -171,7 +171,7 @@ abstract class DocBase<T extends ts.Node> {
 }
 
 class DocVariable extends DocBase<ts.VariableDeclaration> {
-    constructor(ts2Md: Ts2Md) { super(ts2Md, 'Variable', 'Variables') }
+    constructor(sup: DocGenSupportApi) { super(sup, 'Variable', 'Variables') }
 
     override getName(item: ts.VariableDeclaration, sf: ts.SourceFile): string {
         return item.name.getText(sf)
@@ -180,7 +180,7 @@ class DocVariable extends DocBase<ts.VariableDeclaration> {
     override filterItem(item: ts.Statement): ts.VariableDeclaration[] {
         const items: ts.VariableDeclaration[] = []
         if (ts.isVariableStatement(item) && item.modifiers &&
-            (this.ts2Md.options.nothingPrivate || item.modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword))) {
+            (this.sup.nothingPrivate || item.modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword))) {
             for (const v of item.declarationList.declarations) {
                 items.push(v)
             }
@@ -190,7 +190,7 @@ class DocVariable extends DocBase<ts.VariableDeclaration> {
 }
 
 class DocType extends DocBase<ts.TypeAliasDeclaration> {
-    constructor(ts2Md: Ts2Md) { super(ts2Md, 'Type', 'Types') }
+    constructor(sup: DocGenSupportApi) { super(sup, 'Type', 'Types') }
 
     override getName(item: ts.TypeAliasDeclaration): string {
         return item.name.text
@@ -198,14 +198,14 @@ class DocType extends DocBase<ts.TypeAliasDeclaration> {
 
     override filterItem(item: ts.Statement): ts.TypeAliasDeclaration[] {
         if (ts.isTypeAliasDeclaration(item) &&
-            (this.ts2Md.options.nothingPrivate || this.isExportedDeclaration(item)))
+            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
         return []
     }
 }
 
 class DocInterface extends DocBase<ts.InterfaceDeclaration> {
-    constructor(ts2Md: Ts2Md) { super(ts2Md, 'Interface', 'Interfaces') }
+    constructor(sup: DocGenSupportApi) { super(sup, 'Interface', 'Interfaces') }
 
     override getName(item: ts.InterfaceDeclaration): string {
         return item.name.text
@@ -213,7 +213,7 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
 
     override filterItem(item: ts.Statement): ts.InterfaceDeclaration[] {
         if (ts.isInterfaceDeclaration(item) &&
-            (this.ts2Md.options.nothingPrivate || this.isExportedDeclaration(item)))
+            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
         return []
     }
@@ -226,7 +226,7 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
             const propName = (ps.name as ts.Identifier).escapedText
             const r = getJsDoc(m)
             if (r.jsDoc.length > 0) {
-                md += `${this.ts2Md.headingLevelMd(5)} ${propName}\n\n`
+                md += `${this.sup.headingLevelMd(5)} ${propName}\n\n`
                 for (const d of r.jsDoc) {
                     if (d['comment']) {
                         md += `${d['comment']}\n\n`
@@ -239,7 +239,7 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
 }
 
 class DocFunction extends DocBase<ts.FunctionDeclaration> {
-    constructor(ts2Md: Ts2Md) { super(ts2Md, 'Function', 'Functions') }
+    constructor(sup: DocGenSupportApi) { super(sup, 'Function', 'Functions') }
 
     override getName(item: ts.FunctionDeclaration): string {
         return item.name?.text || ''
@@ -247,7 +247,7 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
 
     override filterItem(item: ts.Statement): ts.FunctionDeclaration[] {
         if (ts.isFunctionDeclaration(item) && 
-            (this.ts2Md.options.nothingPrivate || this.isExportedDeclaration(item)))
+            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
         return []
     }
@@ -255,7 +255,7 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
     override toMarkDownTs(docItem: DocItem<ts.FunctionDeclaration>) : string {
         const n = docItem.item
         const sf = docItem.sf
-        const printer = this.ts2Md.printer
+        const printer = this.sup.printer
         
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
         if (n.body && !docItem.jsDocTags.some(t => t.kind === ts.SyntaxKind.JSDocTag
@@ -273,7 +273,7 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
             .map(t => t as ts.JSDocReturnTag)
             .filter(t => !!t.comment)
         if (returnsTags.length > 0) {
-            md += `${this.ts2Md.headingLevelMd(4)} Returns\n\n`
+            md += `${this.sup.headingLevelMd(4)} Returns\n\n`
             for (const t of returnsTags) {
                 const rt = t as ts.JSDocReturnTag
                 md += `${rt.comment}\n\n`
@@ -284,7 +284,7 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
             
             for (const tag of paramTags) {
                 const name = tag.name.getText(docItem.sf)
-                md += `${this.ts2Md.headingLevelMd(5)} ${name}\n\n${tag.comment}`
+                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}`
             }
 
         }
@@ -293,7 +293,7 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
 }
 
 class DocClass extends DocBase<ts.ClassDeclaration> {
-    constructor(ts2Md: Ts2Md) { super(ts2Md, 'Class', 'Classes') }
+    constructor(sup: DocGenSupportApi) { super(sup, 'Class', 'Classes') }
 
     override getName(item: ts.ClassDeclaration): string {
         return item.name?.text || ''
@@ -301,7 +301,7 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
 
     override filterItem(item: ts.Statement): ts.ClassDeclaration[] {
         if (ts.isClassDeclaration(item) && 
-            (this.ts2Md.options.nothingPrivate || this.isExportedDeclaration(item)))
+            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
         return []
     }
@@ -349,7 +349,7 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
     override toMarkDownTs(docItem: DocItem<ts.ClassDeclaration>) : string {
         const n = docItem.item
         const sf = docItem.sf
-        const printer = this.ts2Md.printer
+        const printer = this.sup.printer
 
         this.details = {}
         
@@ -358,7 +358,7 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
         for (const ce of n.members) {
             const r = getJsDoc(ce)
             let isPrivate = false
-            if (!this.ts2Md.options.nothingPrivate &&
+            if (!this.sup.nothingPrivate &&
                 ((ce['modifiers'] && ce['modifiers'].some(m => m.kind === ts.SyntaxKind.PrivateKeyword)) ||
                 r.tags.some(t => ts.isJSDocPrivateTag(t)))) {
                 isPrivate = true
@@ -398,11 +398,17 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
 
         keys.sort()
         for (const key of keys) {
-            md += `${this.ts2Md.headingLevelMd(5)} ${key}\n\n${this.details[key]}`
+            md += `${this.sup.headingLevelMd(5)} ${key}\n\n${this.details[key]}`
         }
 
         return md
     }
+}
+
+interface DocGenSupportApi {
+    printer: ts.Printer
+    nothingPrivate: boolean
+    headingLevelMd(relativeLevel: number) : string
 }
 
 /**
@@ -419,7 +425,8 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
  * 
  *    `@private` Applied to an exported or publicly accessible member keeps it out of documentation.
  */
-export class Ts2Md {
+export class Ts2Md implements DocGenSupportApi {
+
     private program: ts.Program
     /**
      * @private
@@ -427,6 +434,10 @@ export class Ts2Md {
     printer: ts.Printer
     private sourceFiles: ts.SourceFile[] = []
     private docs: DocBase<ts.Node>[] = []
+    /**
+     * @private
+     */
+    nothingPrivate: boolean
 
     /**
      * The top level inupt Typescript file's filename with full path.
@@ -453,6 +464,7 @@ export class Ts2Md {
     constructor(public options: Ts2MdOptions) {
         
         options.inputFilename ||= './src/index.ts'
+        this.nothingPrivate = options.nothingPrivate || false
         
         this.filePath = path.resolve(options.inputFilename)
         this.fileName = path.parse(this.filePath).name

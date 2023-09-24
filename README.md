@@ -132,7 +132,7 @@ The following JSDoc tags are supported:
    `@private` Applied to an exported or publicly accessible member keeps it out of documentation.
 
 ```ts
-export class Ts2Md {
+export class Ts2Md implements DocGenSupportApi {
     filePath: string;
     fileName: string;
     markDown?: string;
