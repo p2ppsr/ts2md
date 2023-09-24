@@ -56,6 +56,7 @@ export interface Ts2MdOptions {
     outputFilename?: string;
     outputReplace: boolean;
     readmeMerge: boolean;
+    nothingPrivate?: boolean;
 }
 ```
 
@@ -99,6 +100,12 @@ and must contain the following merge start and merge end anchors:
    `<!--#endregion ts2md-api-merged-here-->`
    
 The anchors must not be indented.
+
+###### nothingPrivate
+
+If true, overrides private typescript keywords and jsdoc tags.
+
+CAUTION: This setting is inappropriate for published documentation ;-)
 
 </details>
 
@@ -198,7 +205,7 @@ export function mdMerge(md: string)
 
 <details>
 
-<summary>Function mdMerge Argument Details</summary>
+<summary>Function mdMerge Member Details</summary>
 
 ###### md
 
@@ -246,11 +253,11 @@ export function ts2md(options?: Ts2MdOptions): void {
     }
     options ||= {
         inputFilename: "./src/index.ts",
-        outputFilename: "./apiDoc.md",
+        outputFilename: "",
         firstHeadingLevel: 2,
         noTitle: true,
         outputReplace: true,
-        readmeMerge: true
+        readmeMerge: true,
     };
     new Ts2Md(options).run();
 }

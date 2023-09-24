@@ -28,6 +28,7 @@
   ],
   "scripts": {
     "build": "tsc --build",
+    "build:readme": "npm run build && node ./out/src/ts2md.js",
     "test": "jest"
   },
   "devDependencies": {
