@@ -54,6 +54,14 @@ export interface Ts2MdOptions {
     nothingPrivate?: boolean
 }
 
+/**
+ * Build an array of the jsDoc nodes associated with a typescript node.
+ * 
+ * And an array of jsDoc nodes containing jsDoc tags.
+ * 
+ * @param node Typescript `Node` from which to obtain jsDoc and tag nodes.
+ * @returns Array of jsDoc nodes and array of tag nodes.
+ */
 function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[] } {
     const jsDoc: ts.Node[] = (node['jsDoc']) ? node['jsDoc'] as ts.Node[] : []
     
@@ -67,11 +75,35 @@ function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[] } {
     return { jsDoc, tags }
 }
 
+/**
+ * Wrapper for a Typescript `Node` of a specific derived type,
+ * which is of interest for documentation generation.
+ */
 class DocItem<T extends ts.Node> {
+    /**
+     * true if one of the `jsDocTags` is '@private'
+     */
     isPrivate: boolean
+    /**
+     * All the JSDoc style comments associated with this `Node`
+     */
     jsDoc: ts.Node[]    
+    /**
+     * Of the `jsDoc` nodes, which ones represent embedded JSDoc tags.
+     */
     jsDocTags: ts.Node[]
-    
+    /**
+     * Subsidiary documentation nodes when the node has members which
+     * are themselves represented as documentation nodes.
+     */
+    memberDocs: DocBase<ts.Node>[] = []
+
+    /**
+     * This is really here just for demonstration / testing purposes...
+     * @param item The typescript Node for this doc item.
+     * @param name The name for this doc item.
+     * @param sf The source file which defined this item.
+     */
     constructor(public item: T, public name: string, public sf: ts.SourceFile) {
         const r = getJsDoc(item)
         this.jsDoc = r.jsDoc
@@ -83,21 +115,76 @@ class DocItem<T extends ts.Node> {
 abstract class DocBase<T extends ts.Node> {
     docItems: DocItem<T>[] = []
     
-    constructor(public sup: DocGenSupportApi, public label: string, public labelPlural: string) {
+    constructor(public sup: DocGenSupportApi, public label: string, public labelPlural: string, public detailsLabel = 'Details') {
     }
     
     abstract getName(item: T, sf: ts.SourceFile) : string
 
-    abstract filterItem(s: ts.Statement) : T[]
+    abstract filterItem(s: ts.Node) : T[]
 
-    tryAddItem(s: ts.Statement, sf: ts.SourceFile) {
+    tryAddItem(s: ts.Node, sf: ts.SourceFile) {
         const items = this.filterItem(s)
         
         for (const item of items) {
             const docItem = new DocItem(item, this.getName(item, sf), sf)
-            if (!docItem.isPrivate || this.sup.nothingPrivate)
+            if (!docItem.isPrivate || this.sup.nothingPrivate) {
+                docItem.memberDocs = this.extractMemberDocs(docItem)
+                for (const md of docItem.memberDocs) {
+                    md.docItems.sort((a, b) => a.name < b.name ? -1 : a.name === b.name ? 0 : 1)
+                }
                 this.docItems.push(docItem)
+            }
         }
+    }
+
+    extractMemberDocs(docItem: DocItem<ts.Node>) : DocBase<ts.Node>[] { return [] }
+    
+    isNotPrivate(item: ts.Node) : boolean {
+        // not private if either we don't care if its private
+        const notPrivate = (this.sup.nothingPrivate ||
+             // Or it isn't private, which is either by having the private keyword
+             !((item['modifiers'] && item['modifiers'].some(m => m.kind === ts.SyntaxKind.PrivateKeyword)) ||
+               // or by having private jsdoc tag
+               item['jsDoc']?.some(t => ts.isJSDocPrivateTag(t))))
+        return notPrivate
+    }
+
+    findTs(findInTs: string, targetTs: string) : { pos: number, len: number } {
+        let pos = findInTs.indexOf(targetTs)
+        if (pos === -1) {
+            // Try outdenting once
+            targetTs = targetTs.replace(/\n/g, '\n    ',)
+            pos = findInTs.indexOf(targetTs)
+            if (pos === -1) {
+                // set and get accessor bodies sometimes are inlined in full generated class typescript
+                // remove all indenting
+                targetTs = targetTs.replace(/\n */g, ' ')
+                pos = findInTs.indexOf(targetTs)
+            }
+        }
+        return { pos, len: targetTs.length }
+    }
+
+    removeTs(fromTs: string, removeTs: string, withSemi?: boolean) : string {
+        const r = this.findTs(fromTs, removeTs)
+        // See if we would leave a dangling semicolon behind
+        if (r.pos > -1 && withSemi && r.pos + r.len + 1 < fromTs.length && fromTs[r.pos + r.len] === ';' && fromTs[r.pos + r.len + 1] === '\n') {
+            r.len += 2
+            // and remove leading spaces
+            while (r.pos > 0 && fromTs[r.pos - 1] === ' ') { r.pos--; r.len++ }
+        }
+        if (r.pos > -1) {
+            fromTs = fromTs.slice(0, r.pos) + fromTs.slice(r.pos + r.len)
+            if (fromTs[r.pos] === '\n') {
+                let pos2 = r.pos -1
+                while (pos2 > 0 && fromTs[pos2] === ' ') pos2--
+                if (fromTs[pos2] === '\n') {
+                    // and remove blank line left after original removal
+                    fromTs = fromTs.slice(0, pos2) + fromTs.slice(r.pos)
+                }
+            }
+        }
+        return fromTs
     }
 
     /**
@@ -127,7 +214,7 @@ abstract class DocBase<T extends ts.Node> {
        md += '\n```\n\n'
        const details = this.toMarkDownDetails(docItem) 
        if (details) {
-            md += `<details>\n\n<summary>${this.label} ${docItem.name} Member Details</summary>\n\n`
+            md += `<details>\n\n<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>\n\n`
             md += details
             md += `</details>\n\n`
        }
@@ -177,7 +264,7 @@ class DocVariable extends DocBase<ts.VariableDeclaration> {
         return item.name.getText(sf)
     }
 
-    override filterItem(item: ts.Statement): ts.VariableDeclaration[] {
+    override filterItem(item: ts.Node): ts.VariableDeclaration[] {
         const items: ts.VariableDeclaration[] = []
         if (ts.isVariableStatement(item) && item.modifiers &&
             (this.sup.nothingPrivate || item.modifiers.some(m => m.kind === ts.SyntaxKind.ExportKeyword))) {
@@ -196,7 +283,7 @@ class DocType extends DocBase<ts.TypeAliasDeclaration> {
         return item.name.text
     }
 
-    override filterItem(item: ts.Statement): ts.TypeAliasDeclaration[] {
+    override filterItem(item: ts.Node): ts.TypeAliasDeclaration[] {
         if (ts.isTypeAliasDeclaration(item) &&
             (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
@@ -211,7 +298,7 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
         return item.name.text
     }
 
-    override filterItem(item: ts.Statement): ts.InterfaceDeclaration[] {
+    override filterItem(item: ts.Node): ts.InterfaceDeclaration[] {
         if (ts.isInterfaceDeclaration(item) &&
             (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
@@ -239,13 +326,13 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
 }
 
 class DocFunction extends DocBase<ts.FunctionDeclaration> {
-    constructor(sup: DocGenSupportApi) { super(sup, 'Function', 'Functions') }
+    constructor(sup: DocGenSupportApi) { super(sup, 'Function', 'Functions', 'Details') }
 
     override getName(item: ts.FunctionDeclaration): string {
         return item.name?.text || ''
     }
 
-    override filterItem(item: ts.Statement): ts.FunctionDeclaration[] {
+    override filterItem(item: ts.Node): ts.FunctionDeclaration[] {
         if (ts.isFunctionDeclaration(item) && 
             (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
@@ -292,6 +379,120 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
     }
 }
 
+class DocProperty extends DocBase<ts.PropertyDeclaration> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Property', 'Properties') }
+
+    override getName(item: ts.PropertyDeclaration): string {
+        if (ts.isIdentifier(item.name))
+            return item.name.text
+        return ''
+    }
+
+    override filterItem(item: ts.Node): ts.PropertyDeclaration[] {
+        if (ts.isPropertyDeclaration(item) && this.isNotPrivate(item))
+            return [item]
+        return []
+    }
+}
+
+class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Constructor', 'Constructors', 'Arguments') }
+
+    override getName(item: ts.ConstructorDeclaration): string {
+        return 'constructor'
+    }
+
+    override filterItem(item: ts.Node): ts.ConstructorDeclaration[] {
+        if (ts.isConstructorDeclaration(item) && this.isNotPrivate(item))
+            return [item]
+        return []
+    }
+
+    override toMarkDownTs(docItem: DocItem<ts.ConstructorDeclaration>) : string {
+        const n = docItem.item
+        const sf = docItem.sf
+        const printer = this.sup.printer
+        let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
+
+        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDocTags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody'))) {
+            // Remove the body from documentation typescript
+            const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n['body'], sf)
+            mdts = this.removeTs(mdts, bodyts)
+        }
+        return mdts
+    }
+
+    override toMarkDownDetails(docItem: DocItem<ts.ConstructorDeclaration>) : string {
+        let md = ''
+
+        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
+        if (paramTags.length > 0) {
+            
+            for (const tag of paramTags) {
+                const name = tag.name.getText(docItem.sf)
+                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
+            }
+
+        }
+        return md
+    }
+}
+
+class DocMethod extends DocBase<ts.MethodDeclaration> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Method', 'Methods') }
+
+    override getName(item: ts.MethodDeclaration): string {
+        if (ts.isIdentifier(item.name))
+            return item.name.text
+        return ''
+    }
+
+    override filterItem(item: ts.Node): ts.MethodDeclaration[] {
+        if (ts.isMethodDeclaration(item) && this.isNotPrivate(item))
+            return [item]
+        return []
+    }
+
+    override toMarkDownTs(docItem: DocItem<ts.MethodDeclaration>) : string {
+        const n = docItem.item
+        const sf = docItem.sf
+        const printer = this.sup.printer
+        let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
+
+        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDocTags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody'))) {
+            // Remove the body from documentation typescript
+            const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n['body'], sf)
+            mdts = this.removeTs(mdts, bodyts)
+        }
+        return mdts
+    }
+
+    override toMarkDownDetails(docItem: DocItem<ts.MethodDeclaration>) : string {
+        let md = ''
+
+        const returnsTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocReturnTag)
+            .map(t => t as ts.JSDocReturnTag)
+            .filter(t => !!t.comment)
+        if (returnsTags.length > 0) {
+            md += `${this.sup.headingLevelMd(5)} Returns\n\n`
+            for (const t of returnsTags) {
+                const rt = t as ts.JSDocReturnTag
+                md += `${rt.comment}\n\n`
+            }
+        }
+        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
+        if (paramTags.length > 0) {
+            
+            for (const tag of paramTags) {
+                const name = tag.name.getText(docItem.sf)
+                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
+            }
+
+        }
+        return md
+    }
+}
+
 class DocClass extends DocBase<ts.ClassDeclaration> {
     constructor(sup: DocGenSupportApi) { super(sup, 'Class', 'Classes') }
 
@@ -299,51 +500,34 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
         return item.name?.text || ''
     }
 
-    override filterItem(item: ts.Statement): ts.ClassDeclaration[] {
+    override filterItem(item: ts.Node): ts.ClassDeclaration[] {
         if (ts.isClassDeclaration(item) && 
             (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
             return [item]
         return []
     }
 
-    findTs(findInTs: string, targetTs: string) : { pos: number, len: number } {
-        let pos = findInTs.indexOf(targetTs)
-        if (pos === -1) {
-            // Try outdenting once
-            targetTs = targetTs.replace(/\n/g, '\n    ',)
-            pos = findInTs.indexOf(targetTs)
-            if (pos === -1) {
-                // set and get accessor bodies sometimes are inlined in full generated class typescript
-                // remove all indenting
-                targetTs = targetTs.replace(/\n */g, ' ')
-                pos = findInTs.indexOf(targetTs)
+    override extractMemberDocs(docItem: DocItem<ts.ClassDeclaration>) : DocBase<ts.Node>[] {
+        const n = docItem.item
+        const sf = docItem.sf
+
+        let docs: DocBase<ts.Node>[] = [
+            new DocConstructor(this.sup),
+            new DocProperty(this.sup),
+            new DocMethod(this.sup),
+        ]
+
+        for (const ce of n.members) {
+            for (const doc of docs) {
+                doc.tryAddItem(ce, sf)
             }
         }
-        return { pos, len: targetTs.length }
+        
+        // Eliminate empty doc categories
+        docs = docs.filter(d => d.docItems.length > 0)
+        return docs
     }
-
-    removeTs(fromTs: string, removeTs: string, withSemi?: boolean) : string {
-        const r = this.findTs(fromTs, removeTs)
-        // See if we would leave a dangling semicolon behind
-        if (r.pos > -1 && withSemi && r.pos + r.len + 1 < fromTs.length && fromTs[r.pos + r.len] === ';' && fromTs[r.pos + r.len + 1] === '\n') {
-            r.len += 2
-            // and remove leading spaces
-            while (r.pos > 0 && fromTs[r.pos - 1] === ' ') { r.pos--; r.len++ }
-        }
-        if (r.pos > -1) {
-            fromTs = fromTs.slice(0, r.pos) + fromTs.slice(r.pos + r.len)
-            if (fromTs[r.pos] === '\n') {
-                let pos2 = r.pos -1
-                while (pos2 > 0 && fromTs[pos2] === ' ') pos2--
-                if (fromTs[pos2] === '\n') {
-                    // and remove blank line left after original removal
-                    fromTs = fromTs.slice(0, pos2) + fromTs.slice(r.pos)
-                }
-            }
-        }
-        return fromTs
-    }
-
+    
     details: Record<string, string> = {}
 
     override toMarkDownTs(docItem: DocItem<ts.ClassDeclaration>) : string {
@@ -391,16 +575,32 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
     }
 
     override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>) : string {
-        const keys = Object.keys(this.details)
-        if (keys.length < 1) return ''
-
         let md = ''
 
-        keys.sort()
-        for (const key of keys) {
-            md += `${this.sup.headingLevelMd(5)} ${key}\n\n${this.details[key]}`
-        }
+        for (const doc of docItem.memberDocs) {
+            
+            for (const item of doc.docItems) {
+               const itemName = item.name === 'constructor' ? '' : item.name
+               md += `${this.sup.headingLevelMd(4)} ${this.label} ${docItem.name} ${doc.label} ${itemName}\n\n`
 
+               if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
+                    for (const d of item.jsDoc) {
+                        if (d['comment'])
+                            md += `${d['comment']}\n\n`
+                    }
+               }
+               md += '```ts\n'
+               md += doc.toMarkDownTs(item)
+               md += '\n```\n\n'
+               const details = doc.toMarkDownDetails(item) 
+               if (details) {
+                    md += `<details>\n\n<summary>${this.label} ${docItem.name} ${doc.label} ${itemName} ${doc.detailsLabel}</summary>\n\n`
+                    md += details
+                    md += `</details>\n\n`
+               }
+            }
+        }
+        
         return md
     }
 }
@@ -582,6 +782,11 @@ export class Ts2Md implements DocGenSupportApi {
         return md
     }
     
+    /**
+     * Generates a markdown table of named links to docItem documentation headers.
+     * @param doc The category of documentation for which to generate the table.
+     * @returns markdown table of named links to docItem documentation headers
+     */
     private generateDocItemLinksTable(doc: DocBase<ts.Node>) : string {
         let md = ''
 
@@ -646,6 +851,7 @@ export class Ts2Md implements DocGenSupportApi {
  *   "readmeMerge": true
  * }
  * ```
+ * @param options Optional options to control markdown generation.
  * @publicbody
  */
 export function ts2md(options?: Ts2MdOptions) : void {

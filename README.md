@@ -62,7 +62,7 @@ export interface Ts2MdOptions {
 
 <details>
 
-<summary>Interface Ts2MdOptions Member Details</summary>
+<summary>Interface Ts2MdOptions Details</summary>
 
 ###### inputFilename
 
@@ -144,32 +144,66 @@ export class Ts2Md implements DocGenSupportApi {
 
 <details>
 
-<summary>Class Ts2Md Member Details</summary>
+<summary>Class Ts2Md Details</summary>
 
-###### constructor
+##### Class Ts2Md Constructor 
 
 Construct a new instance configured for `run` method to be called next.
 
-###### fileName
+```ts
+constructor(public options: Ts2MdOptions) 
+```
+
+<details>
+
+<summary>Class Ts2Md Constructor  Arguments</summary>
+
+###### options
+
+Must be provided. inputFilename defaults to `./src/index.ts`
+
+</details>
+
+##### Class Ts2Md Property fileName
 
 The top level inupt Typescript file's filename without path
 
-###### filePath
+```ts
+fileName: string
+```
+
+##### Class Ts2Md Property filePath
 
 The top level inupt Typescript file's filename with full path.
 
-###### markDown
+```ts
+filePath: string
+```
+
+##### Class Ts2Md Property markDown
 
 The generated documentation as markdown string
 
-###### outputPath
+```ts
+markDown?: string
+```
+
+##### Class Ts2Md Property outputPath
 
 The file path to which `markDown` was written.
 
-###### run
+```ts
+outputPath?: string
+```
+
+##### Class Ts2Md Method run
 
 Generates the documentation markdown and write's it to output file
 and/or merges it to README.md
+
+```ts
+run(): void 
+```
 
 </details>
 
@@ -205,7 +239,7 @@ export function mdMerge(md: string)
 
 <details>
 
-<summary>Function mdMerge Member Details</summary>
+<summary>Function mdMerge Details</summary>
 
 ###### md
 
@@ -262,6 +296,14 @@ export function ts2md(options?: Ts2MdOptions): void {
     new Ts2Md(options).run();
 }
 ```
+
+<details>
+
+<summary>Function ts2md Details</summary>
+
+###### options
+
+Optional options to control markdown generation.</details>
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
