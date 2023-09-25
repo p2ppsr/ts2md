@@ -64,30 +64,60 @@ export interface Ts2MdOptions {
 
 <summary>Interface Ts2MdOptions Details</summary>
 
-###### inputFilename
-
-Primary typescript source file, default is `./src/index.ts`
-
-###### firstHeadingLevel
+##### Interface Ts2MdOptions Property firstHeadingLevel
 
 The heading level for the first generated heading.
 
-###### noTitle
+```ts
+firstHeadingLevel: 1 | 2 | 3
+```
+
+##### Interface Ts2MdOptions Property inputFilename
+
+Primary typescript source file, default is `./src/index.ts`
+
+```ts
+inputFilename: string
+```
+
+##### Interface Ts2MdOptions Property noTitle
 
 Set to true if generated markdown will be merged into
 a file that already includes a containing header.
 
-###### outputFilename
+```ts
+noTitle: boolean
+```
+
+##### Interface Ts2MdOptions Property nothingPrivate
+
+If true, overrides private typescript keywords and jsdoc tags.
+
+CAUTION: This setting is inappropriate for published documentation ;-)
+
+```ts
+nothingPrivate?: boolean
+```
+
+##### Interface Ts2MdOptions Property outputFilename
 
 If valid, a copy of the generated markdown documentation will be
 saved to this file.
 
-###### outputReplace
+```ts
+outputFilename?: string
+```
+
+##### Interface Ts2MdOptions Property outputReplace
 
 Set to true to attempt to delete an existing output file before
 writing new output.
 
-###### readmeMerge
+```ts
+outputReplace: boolean
+```
+
+##### Interface Ts2MdOptions Property readmeMerge
 
 Set to true if the generated output should be merged into README.md
 
@@ -101,11 +131,9 @@ and must contain the following merge start and merge end anchors:
    
 The anchors must not be indented.
 
-###### nothingPrivate
-
-If true, overrides private typescript keywords and jsdoc tags.
-
-CAUTION: This setting is inappropriate for published documentation ;-)
+```ts
+readmeMerge: boolean
+```
 
 </details>
 

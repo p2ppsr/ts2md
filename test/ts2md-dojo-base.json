@@ -1,0 +1,8 @@
+{
+    "inputFilename": "../../dojo/dojo-base/src/index.ts",
+    "outputFilename": "./apiDoc.md",
+    "firstHeadingLevel": 1,
+    "noTitle": false,
+    "outputReplace": true,
+    "readmeMerge": false
+}

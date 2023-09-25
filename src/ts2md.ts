@@ -291,40 +291,6 @@ class DocType extends DocBase<ts.TypeAliasDeclaration> {
     }
 }
 
-class DocInterface extends DocBase<ts.InterfaceDeclaration> {
-    constructor(sup: DocGenSupportApi) { super(sup, 'Interface', 'Interfaces') }
-
-    override getName(item: ts.InterfaceDeclaration): string {
-        return item.name.text
-    }
-
-    override filterItem(item: ts.Node): ts.InterfaceDeclaration[] {
-        if (ts.isInterfaceDeclaration(item) &&
-            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
-            return [item]
-        return []
-    }
-
-    override toMarkDownDetails(docItem: DocItem<ts.InterfaceDeclaration>) : string {
-        let md = ''
-        
-        for (const m of docItem.item.members) {
-            const ps = m as ts.PropertySignature
-            const propName = (ps.name as ts.Identifier).escapedText
-            const r = getJsDoc(m)
-            if (r.jsDoc.length > 0) {
-                md += `${this.sup.headingLevelMd(5)} ${propName}\n\n`
-                for (const d of r.jsDoc) {
-                    if (d['comment']) {
-                        md += `${d['comment']}\n\n`
-                    }
-                }
-            }
-        }
-        return md
-    }
-}
-
 class DocFunction extends DocBase<ts.FunctionDeclaration> {
     constructor(sup: DocGenSupportApi) { super(sup, 'Function', 'Functions', 'Details') }
 
@@ -528,15 +494,11 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
         return docs
     }
     
-    details: Record<string, string> = {}
-
     override toMarkDownTs(docItem: DocItem<ts.ClassDeclaration>) : string {
         const n = docItem.item
         const sf = docItem.sf
         const printer = this.sup.printer
 
-        this.details = {}
-        
         // class definition typescript including all members and function bodies...
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
         for (const ce of n.members) {
@@ -554,22 +516,6 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
                 const bodyts  = printer.printNode(ts.EmitHint.Unspecified, ce['body'], sf)
                 mdts = this.removeTs(mdts, bodyts)
             }
-            if (!isPrivate && r.jsDoc.length > 0) {
-                // Collect member details
-                let name = ce.name?.getText(docItem.sf) || ''
-                if (ce.kind === ts.SyntaxKind.Constructor) {
-                    name = 'constructor'
-                    // Default value of {}['constructor'] is an object...
-                    if (typeof this.details[name] !== 'string') this.details[name] = ''
-                }
-                let memberDetails = this.details[name] ?? ""
-                for (const d of r.jsDoc) {
-                    if (d['comment']) {
-                        memberDetails += `${d['comment']}\n\n`
-                    }
-                }
-                this.details[name] = memberDetails
-            }
         }
         return mdts
     }
@@ -581,6 +527,142 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
             
             for (const item of doc.docItems) {
                const itemName = item.name === 'constructor' ? '' : item.name
+               md += `${this.sup.headingLevelMd(4)} ${this.label} ${docItem.name} ${doc.label} ${itemName}\n\n`
+
+               if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
+                    for (const d of item.jsDoc) {
+                        if (d['comment'])
+                            md += `${d['comment']}\n\n`
+                    }
+               }
+               md += '```ts\n'
+               md += doc.toMarkDownTs(item)
+               md += '\n```\n\n'
+               const details = doc.toMarkDownDetails(item) 
+               if (details) {
+                    md += `<details>\n\n<summary>${this.label} ${docItem.name} ${doc.label} ${itemName} ${doc.detailsLabel}</summary>\n\n`
+                    md += details
+                    md += `</details>\n\n`
+               }
+            }
+        }
+        
+        return md
+    }
+}
+
+class DocPropertySignature extends DocBase<ts.PropertySignature> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Property', 'Properties') }
+
+    override getName(item: ts.PropertySignature): string {
+        if (ts.isIdentifier(item.name))
+            return item.name.text
+        return ''
+    }
+
+    override filterItem(item: ts.Node): ts.PropertySignature[] {
+        if (ts.isPropertySignature(item) && this.isNotPrivate(item))
+            return [item]
+        return []
+    }
+}
+
+class DocMethodSignature extends DocBase<ts.MethodSignature> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Method', 'Methods') }
+
+    override getName(item: ts.MethodSignature): string {
+        if (ts.isIdentifier(item.name))
+            return item.name.text
+        return ''
+    }
+
+    override filterItem(item: ts.Node): ts.MethodSignature[] {
+        if (ts.isMethodSignature(item) && this.isNotPrivate(item))
+            return [item]
+        return []
+    }
+
+    override toMarkDownTs(docItem: DocItem<ts.MethodSignature>) : string {
+        const n = docItem.item
+        const sf = docItem.sf
+        const printer = this.sup.printer
+        let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
+
+        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDocTags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody'))) {
+            // Remove the body from documentation typescript
+            const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n['body'], sf)
+            mdts = this.removeTs(mdts, bodyts)
+        }
+        return mdts
+    }
+
+    override toMarkDownDetails(docItem: DocItem<ts.MethodSignature>) : string {
+        let md = ''
+
+        const returnsTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocReturnTag)
+            .map(t => t as ts.JSDocReturnTag)
+            .filter(t => !!t.comment)
+        if (returnsTags.length > 0) {
+            md += `${this.sup.headingLevelMd(5)} Returns\n\n`
+            for (const t of returnsTags) {
+                const rt = t as ts.JSDocReturnTag
+                md += `${rt.comment}\n\n`
+            }
+        }
+        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
+        if (paramTags.length > 0) {
+            
+            for (const tag of paramTags) {
+                const name = tag.name.getText(docItem.sf)
+                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
+            }
+
+        }
+        return md
+    }
+}
+
+class DocInterface extends DocBase<ts.InterfaceDeclaration> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Interface', 'Interfaces') }
+
+    override getName(item: ts.InterfaceDeclaration): string {
+        return item.name.text
+    }
+
+    override filterItem(item: ts.Node): ts.InterfaceDeclaration[] {
+        if (ts.isInterfaceDeclaration(item) &&
+            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
+            return [item]
+        return []
+    }
+
+    override extractMemberDocs(docItem: DocItem<ts.InterfaceDeclaration>) : DocBase<ts.Node>[] {
+        const n = docItem.item
+        const sf = docItem.sf
+
+        let docs: DocBase<ts.Node>[] = [
+            new DocPropertySignature(this.sup),
+            new DocMethodSignature(this.sup),
+        ]
+
+        for (const ce of n.members) {
+            for (const doc of docs) {
+                doc.tryAddItem(ce, sf)
+            }
+        }
+        
+        // Eliminate empty doc categories
+        docs = docs.filter(d => d.docItems.length > 0)
+        return docs
+    }
+    
+    override toMarkDownDetails(docItem: DocItem<ts.InterfaceDeclaration>) : string {
+        let md = ''
+
+        for (const doc of docItem.memberDocs) {
+            
+            for (const item of doc.docItems) {
+               const itemName = item.name
                md += `${this.sup.headingLevelMd(4)} ${this.label} ${docItem.name} ${doc.label} ${itemName}\n\n`
 
                if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
