@@ -794,7 +794,7 @@ export class Ts2Md implements DocGenSupportApi {
         nameLinks.sort((a, b) => a.name < b.name ? -1 : a.name === b.name ? 0 : 1)
 
         let cols = 1, rows = nameLinks.length
-        while (cols < 4 && rows > 12) { cols++; rows = Math.ceil(nameLinks.length / cols) }
+        while (cols < 3 && rows > 12) { cols++; rows = Math.ceil(nameLinks.length / cols) }
 
         for (let col = 1; col <= cols; col++) { md += '| ' } md += '|\n'
 
