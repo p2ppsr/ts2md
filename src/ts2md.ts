@@ -640,11 +640,11 @@ export class Ts2Md implements DocGenSupportApi {
     nothingPrivate: boolean
 
     /**
-     * The top level inupt Typescript file's filename with full path.
+     * The top level input Typescript file's filename with full path.
      */
     filePath: string
     /**
-     * The top level inupt Typescript file's filename without path
+     * The top level input Typescript file's filename without path
      */
     fileName: string
     /**
