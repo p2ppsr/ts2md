@@ -166,7 +166,7 @@ Must be provided. inputFilename defaults to `./src/index.ts`
 
 ##### Class Ts2Md Property fileName
 
-The top level inupt Typescript file's filename without path
+The top level input Typescript file's filename without path
 
 ```ts
 fileName: string
@@ -174,7 +174,7 @@ fileName: string
 
 ##### Class Ts2Md Property filePath
 
-The top level inupt Typescript file's filename with full path.
+The top level input Typescript file's filename with full path.
 
 ```ts
 filePath: string
