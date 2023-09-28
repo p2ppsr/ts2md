@@ -1,0 +1,8 @@
+{
+    "inputFilename": "../temp-foobar/src/index.ts",
+    "outputFilename": "../temp-foobar/apiDoc.md",
+    "firstHeadingLevel": 1,
+    "noTitle": false,
+    "outputReplace": true,
+    "readmeMerge": false
+}

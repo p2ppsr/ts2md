@@ -62,7 +62,7 @@ export interface Ts2MdOptions {
  * @param node Typescript `Node` from which to obtain jsDoc and tag nodes.
  * @returns Array of jsDoc nodes and array of tag nodes.
  */
-function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[] } {
+function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[], examples: string[] } {
     const jsDoc: ts.Node[] = (node['jsDoc']) ? node['jsDoc'] as ts.Node[] : []
     
     const tags: ts.Node[] = []
@@ -71,8 +71,17 @@ function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[] } {
             tags.push(tag)
         }
     }
+    
+    const examples: string[] = tags
+        .filter(t => t.kind === ts.SyntaxKind.JSDocTag && ((t as ts.JSDocTag).tagName.escapedText === 'example') && t['comment'])
+        .map(t => {
+            let comment: string = t['comment']
+            if (comment.indexOf('```') === -1)
+                comment = '```ts\n' + comment + '\n```\n'
+            return comment
+        })
 
-    return { jsDoc, tags }
+    return { jsDoc, tags, examples }
 }
 
 /**
@@ -93,6 +102,10 @@ class DocItem<T extends ts.Node> {
      */
     jsDocTags: ts.Node[]
     /**
+     * Of the `jsDocTags`, the @example tag comments. Comments without code blocks are assumed to be typescript codeblocks
+     */
+    examples: string[]
+    /**
      * Subsidiary documentation nodes when the node has members which
      * are themselves represented as documentation nodes.
      */
@@ -108,6 +121,7 @@ class DocItem<T extends ts.Node> {
         const r = getJsDoc(item)
         this.jsDoc = r.jsDoc
         this.jsDocTags = r.tags
+        this.examples = r.examples
         this.isPrivate = r.tags.some(t => t.kind === ts.SyntaxKind.JSDocPrivateTag)
     }
 }
@@ -472,13 +486,20 @@ class DocMethod extends DocBase<ts.MethodDeclaration> {
         }
         const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
         if (paramTags.length > 0) {
-            
+            md += `${this.sup.headingLevelMd(5)} Arguments\n\n`
             for (const tag of paramTags) {
                 const name = tag.name.getText(docItem.sf)
-                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
+                md += `${this.sup.headingLevelMd(6)} ${name}\n\n${tag.comment}\n\n`
             }
-
         }
+
+        if (docItem.examples.length > 0) {
+            md += `${this.sup.headingLevelMd(5)} Examples\n\n`
+            for (const e of docItem.examples) {
+                md += `${e}\n`
+            }
+        }
+
         return md
     }
 }
