@@ -233,7 +233,14 @@ abstract class DocBase<T extends ts.Node> {
      * @returns typescript syntax to be added within a typescript syntax code block for this `DocItem`
      */
     toMarkDownTs(docItem: DocItem<T>) : string {
-        return this.sup.printer.printNode(ts.EmitHint.Unspecified, docItem.item, docItem.sf)
+        let item = docItem.item
+        if (item['initializer'] && docItem.jsDocTags.some(t => t.kind === ts.SyntaxKind.JSDocTag
+            && (t as ts.JSDocTag).tagName.escapedText === 'privateinitializer')) {
+            item = { ...item }
+            item['initializer'] = undefined
+        }
+        const mdts = this.sup.printer.printNode(ts.EmitHint.Unspecified, item, docItem.sf)
+        return mdts
     }
 
     /**
@@ -341,6 +348,16 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
             }
 
         }
+
+        const throwTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocThrowsTag).map(t => t as ts.JSDocThrowsTag).filter(t => t.comment)
+        if (throwTags.length > 0) {
+            
+            for (const tag of throwTags) {
+                const name = 'foo'
+                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}`
+            }
+
+        }
         return md
     }
 }
@@ -393,13 +410,20 @@ class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
 
         const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
         if (paramTags.length > 0) {
-            
             for (const tag of paramTags) {
                 const name = tag.name.getText(docItem.sf)
                 md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
             }
-
         }
+
+        const throwTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocThrowsTag).map(t => t as ts.JSDocThrowsTag).filter(t => t.comment)
+        if (throwTags.length > 0) {
+            for (const tag of throwTags) {
+                const name = 'foo'
+                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}`
+            }
+        }
+
         return md
     }
 }
@@ -515,6 +539,9 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
                 // Remove the body from documentation typescript
                 const bodyts  = printer.printNode(ts.EmitHint.Unspecified, ce['body'], sf)
                 mdts = this.removeTs(mdts, bodyts)
+            } else if (ce['initializer'] && r.tags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'privateinitializer')) {
+                const initializerts  = printer.printNode(ts.EmitHint.Unspecified, ce['initializer'], sf)
+                mdts = this.removeTs(mdts, `= ${initializerts};`)
             }
         }
         return mdts
@@ -706,6 +733,8 @@ interface DocGenSupportApi {
  *    `@publicbody` Applied to a class method or function. Adds the function body to the documentation with embedded comments removed.
  * 
  *    `@private` Applied to an exported or publicly accessible member keeps it out of documentation.
+ * 
+ *    `@privateinitializer` Applied to a class property with an initializer will prevent the initializer from appearing in the documentation.
  */
 export class Ts2Md implements DocGenSupportApi {
 

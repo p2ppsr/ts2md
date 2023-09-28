@@ -159,6 +159,8 @@ The following JSDoc tags are supported:
 
    `@private` Applied to an exported or publicly accessible member keeps it out of documentation.
 
+   `@privateinitializer` Applied to a class property with an initializer will prevent the initializer from appearing in the documentation.
+
 ```ts
 export class Ts2Md implements DocGenSupportApi {
     filePath: string;
