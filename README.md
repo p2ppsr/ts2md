@@ -1,12 +1,27 @@
 # ts2md
 
-Simple Typescript Documentation in `README.md`` Generator
+Simple Typescript Documentation in `README.md` Generator
 
 The focus of this generator is single output file, low effort, low maintenance, high accuracy API documentation generation.
 
 Many JSDoc tags are ignored as not relevant to this objective. Some custom tags have been added.
 
 For a full featured, fine grain typescript documentation generator see [TypeDoc](https://typedoc.org/)
+
+## Supported JSDoc Tags
+
+The following JSDoc tags are supported:
+
+| Tag | Description |
+|---|---|
+| @example | Adds example as code block or comments and embedded code block(s). |
+| @param | Adds comment for function or method parameter. |
+| @private | Hides an otherwise accessible documentation item. |
+| @privateinitializer | Hides property initializer from documentation typescript. |
+| @property | Adds comment for class or interface property parameter in parent's JSDoc comment. |
+| @publicbody | Overrides the normal hidding of method and function bodies. |
+| @returns | Adds comment for function or method return value. |
+| @throws | Adds thrown error comment to function or method. |
 
 ## Installation
 
@@ -40,21 +55,6 @@ automatically updating documentation before publishing your package:
     "prepublish": "npm run build && npx ts2md",
   }
 ```
-## Supported JSDoc Tags
-
-The following JSDoc tags are supported:
-
-| Tag | Description |
-|---|---|
-| @example | Adds example as code block or comments and embedded code block(s). |
-| @param | Adds comment for function or method parameter. |
-| @private | Hides an otherwise accessible documentation item. |
-| @privateinitializer | Hides property initializer from documentation typescript. |
-| @property | Adds comment for class or interface property parameter in parent's JSDoc comment. |
-| @publicbody | Overrides the normal hidding of method and function bodies. |
-| @returns | Adds comment for function or method return value. |
-| @throws | Adds thrown error comment to function or method. |
-
 ## API
 
 <!--#region ts2md-api-merged-here-->
