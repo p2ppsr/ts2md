@@ -5,3 +5,4 @@ tsconfig.tsbuildinfo
 *.tgz
 .DS_Store
 apiDoc.md
+ts2md.json

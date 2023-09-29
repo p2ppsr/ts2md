@@ -34,6 +34,20 @@ automatically updating documentation before publishing your package:
     "prepublish": "npm run build && npx ts2md",
   }
 ```
+## Supported JSDoc Tags
+
+The following JSDoc tags are supported:
+
+| Tag | Description |
+|---|---|
+| @example | Adds example as code block or comments and embedded code block(s). |
+| @param | Adds comment for function or method parameter. |
+| @private | Hides an otherwise accessible documentation item. |
+| @privateinitializer | Hides property initializer from documentation typescript. |
+| @property | Adds comment for class or interface property parameter in parent's JSDoc comment. |
+| @publicbody | Overrides the normal hidding of method and function bodies. |
+| @returns | Adds comment for function or method return value. |
+| @throws | Adds thrown error comment to function or method. |
 
 ## API
 
@@ -43,8 +57,6 @@ Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](
 ### Interfaces
 
 #### Interface: Ts2MdOptions
-
-##### Description
 
 Options for the `Ts2Md` class which generates Typescript documentation.
 
@@ -64,7 +76,7 @@ export interface Ts2MdOptions {
 
 <summary>Interface Ts2MdOptions Details</summary>
 
-##### Interface Ts2MdOptions Property firstHeadingLevel
+##### Property firstHeadingLevel
 
 The heading level for the first generated heading.
 
@@ -72,7 +84,7 @@ The heading level for the first generated heading.
 firstHeadingLevel: 1 | 2 | 3
 ```
 
-##### Interface Ts2MdOptions Property inputFilename
+##### Property inputFilename
 
 Primary typescript source file, default is `./src/index.ts`
 
@@ -80,7 +92,7 @@ Primary typescript source file, default is `./src/index.ts`
 inputFilename: string
 ```
 
-##### Interface Ts2MdOptions Property noTitle
+##### Property noTitle
 
 Set to true if generated markdown will be merged into
 a file that already includes a containing header.
@@ -89,7 +101,7 @@ a file that already includes a containing header.
 noTitle: boolean
 ```
 
-##### Interface Ts2MdOptions Property nothingPrivate
+##### Property nothingPrivate
 
 If true, overrides private typescript keywords and jsdoc tags.
 
@@ -99,7 +111,7 @@ CAUTION: This setting is inappropriate for published documentation ;-)
 nothingPrivate?: boolean
 ```
 
-##### Interface Ts2MdOptions Property outputFilename
+##### Property outputFilename
 
 If valid, a copy of the generated markdown documentation will be
 saved to this file.
@@ -108,7 +120,7 @@ saved to this file.
 outputFilename?: string
 ```
 
-##### Interface Ts2MdOptions Property outputReplace
+##### Property outputReplace
 
 Set to true to attempt to delete an existing output file before
 writing new output.
@@ -117,7 +129,7 @@ writing new output.
 outputReplace: boolean
 ```
 
-##### Interface Ts2MdOptions Property readmeMerge
+##### Property readmeMerge
 
 Set to true if the generated output should be merged into README.md
 
@@ -143,8 +155,6 @@ Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](
 ### Classes
 
 #### Class: Ts2Md
-
-##### Description
 
 Uses the Typescript compiler to parse source tree given a top level source file such as `index.ts`.
 
@@ -176,7 +186,7 @@ export class Ts2Md implements DocGenSupportApi {
 
 <summary>Class Ts2Md Details</summary>
 
-##### Class Ts2Md Constructor 
+##### Constructor
 
 Construct a new instance configured for `run` method to be called next.
 
@@ -184,17 +194,12 @@ Construct a new instance configured for `run` method to be called next.
 constructor(public options: Ts2MdOptions) 
 ```
 
-<details>
+Argument Details
 
-<summary>Class Ts2Md Constructor  Arguments</summary>
++ **options**
+  + Must be provided. inputFilename defaults to `./src/index.ts`
 
-###### options
-
-Must be provided. inputFilename defaults to `./src/index.ts`
-
-</details>
-
-##### Class Ts2Md Property fileName
+##### Property fileName
 
 The top level input Typescript file's filename without path
 
@@ -202,7 +207,7 @@ The top level input Typescript file's filename without path
 fileName: string
 ```
 
-##### Class Ts2Md Property filePath
+##### Property filePath
 
 The top level input Typescript file's filename with full path.
 
@@ -210,7 +215,7 @@ The top level input Typescript file's filename with full path.
 filePath: string
 ```
 
-##### Class Ts2Md Property markDown
+##### Property markDown
 
 The generated documentation as markdown string
 
@@ -218,7 +223,7 @@ The generated documentation as markdown string
 markDown?: string
 ```
 
-##### Class Ts2Md Property outputPath
+##### Property outputPath
 
 The file path to which `markDown` was written.
 
@@ -226,7 +231,7 @@ The file path to which `markDown` was written.
 outputPath?: string
 ```
 
-##### Class Ts2Md Method run
+##### Method run
 
 Generates the documentation markdown and write's it to output file
 and/or merges it to README.md
@@ -253,8 +258,6 @@ Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](
 
 #### Function: mdMerge
 
-##### Description
-
 Quick and dirty README.md merge function.
 
 The anchors must not be indented and must exactly match:
@@ -271,16 +274,17 @@ export function mdMerge(md: string)
 
 <summary>Function mdMerge Details</summary>
 
-###### md
+Argument Details
 
-The markdown to insert between the start and end anchors.</details>
++ **md**
+  + The markdown to insert between the start and end anchors.
+
+</details>
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
 ---
 #### Function: ts2md
-
-##### Description
 
 Generate Typescript documentation and merge into README.md
 
@@ -331,9 +335,12 @@ export function ts2md(options?: Ts2MdOptions): void {
 
 <summary>Function ts2md Details</summary>
 
-###### options
+Argument Details
 
-Optional options to control markdown generation.</details>
++ **options**
+  + Optional options to control markdown generation.
+
+</details>
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 

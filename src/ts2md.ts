@@ -55,33 +55,127 @@ export interface Ts2MdOptions {
 }
 
 /**
- * Build an array of the jsDoc nodes associated with a typescript node.
- * 
- * And an array of jsDoc nodes containing jsDoc tags.
- * 
- * @param node Typescript `Node` from which to obtain jsDoc and tag nodes.
- * @returns Array of jsDoc nodes and array of tag nodes.
+ * Parsed JSDoc info associated with a documentation item
  */
-function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[], examples: string[] } {
+interface JSDocInfo {
+    /**
+     * true if has '@private' tag
+     */
+    isPrivate: boolean
+    /**
+     * true if has '@publicbody' tag
+     */
+    publicBody: boolean
+    /**
+     * true if has '@privateinitializer' tag
+     */
+    privateInitializer: boolean
+    /**
+     * JSDoc nodes with ['comment'] strings not otherwise tagged with a recognized tag.
+     */
+    comments: string[]
+    /**
+     * The @param tag comments.
+     */
+    params: ts.JSDocParameterTag[]
+    /**
+     * JSDoc nodes tagged with '@returns'
+     */
+    returns: ts.JSDocReturnTag[]
+    /**
+     * JSDoc nodes tagged with '@throws'
+     */
+    throws: ts.JSDocThrowsTag[]
+    /**
+     * The @example tag comments. Comments without code blocks are assumed to be typescript codeblocks
+     */
+    examples: string[]
+    /**
+     * The @property tag identifiers and comments. These are forwarded to the relevant member property documentation.
+     */
+    properties: Record<string, string>
+    /**
+     * JSDoc tags not parsed into other properties
+     */
+    tags: ts.Node[]
+    /**
+     * JSDoc nodes not parsed into other properties
+     */
+    other: ts.Node[]    
+}
+
+/**
+ * Parse available JSDoc information on this node.
+ */
+function getJsDocInfo(node: ts.Node, name: string, parent?: DocItem<ts.Node>) : JSDocInfo {
+    const r: JSDocInfo = {
+        isPrivate: false,
+        comments: [],
+        params: [],
+        returns: [],
+        throws: [],
+        examples: [],
+        tags: [],
+        other: [],
+        publicBody: false,
+        privateInitializer: false,
+        properties: {}
+    }
+
+    if (name !== 'constructor' && parent && parent.jsDoc.properties[name])
+        // Forward @property tags on the parent to this node by name
+        r.comments.push(parent.jsDoc.properties[name])
+
     const jsDoc: ts.Node[] = (node['jsDoc']) ? node['jsDoc'] as ts.Node[] : []
-    
-    const tags: ts.Node[] = []
+
     for (const doc of jsDoc) {
-        for (const tag of (doc['tags'] ? doc['tags'] as ts.Node[] : [])) {
-            tags.push(tag)
+
+        const comment = doc['comment']
+        if (comment && typeof comment === 'string')
+            r.comments.push(comment)
+
+        for (const t of (doc['tags'] ? doc['tags'] as ts.Node[] : [])) {
+            const comment = typeof t['comment'] === 'string' ? t['comment'] : undefined
+            if (t.kind === ts.SyntaxKind.JSDocParameterTag) {
+                if (comment)
+                    r.params.push(t as ts.JSDocParameterTag)
+            } else if (t.kind === ts.SyntaxKind.JSDocReturnTag) {
+                if (comment)
+                    r.returns.push(t as ts.JSDocReturnTag)
+            } else if (t.kind === ts.SyntaxKind.JSDocThrowsTag) {
+                if (comment)
+                    r.throws.push(t as ts.JSDocThrowsTag)
+            } else {
+                const tag = t.kind === ts.SyntaxKind.JSDocTag ? (t as ts.JSDocTag).tagName.escapedText : ''
+                if (tag === 'publicbody') {
+                    r.publicBody = true
+                }
+                else if (tag === 'privateinitializer') {
+                    r.privateInitializer = true
+                }
+                else if (tag === 'property') {
+                    if (comment) {
+                        const re = /(?<identifier>[^ \t\-:]+)[ \t\-:]+(?<comment>.*)/
+                        const m = comment.match(re)
+                        if (m && m.index === 0 && m.groups) {
+                            r.properties[m.groups.identifier] = m.groups.comment
+                        }
+                    }
+                }
+                else if (tag === 'example') {
+                    if (comment) {
+                        let example: string = comment
+                        if (example.indexOf('```') === -1)
+                            example = '```ts\n' + example + '\n```\n'
+                        r.examples.push(example)
+                    }
+                }
+                else
+                    r.tags.push(t)
+            }
         }
     }
-    
-    const examples: string[] = tags
-        .filter(t => t.kind === ts.SyntaxKind.JSDocTag && ((t as ts.JSDocTag).tagName.escapedText === 'example') && t['comment'])
-        .map(t => {
-            let comment: string = t['comment']
-            if (comment.indexOf('```') === -1)
-                comment = '```ts\n' + comment + '\n```\n'
-            return comment
-        })
-
-    return { jsDoc, tags, examples }
+    return r
 }
 
 /**
@@ -90,21 +184,10 @@ function getJsDoc(node: ts.Node) : { jsDoc: ts.Node[], tags: ts.Node[], examples
  */
 class DocItem<T extends ts.Node> {
     /**
-     * true if one of the `jsDocTags` is '@private'
+     * Parsed JSDoc information for this item
      */
-    isPrivate: boolean
-    /**
-     * All the JSDoc style comments associated with this `Node`
-     */
-    jsDoc: ts.Node[]    
-    /**
-     * Of the `jsDoc` nodes, which ones represent embedded JSDoc tags.
-     */
-    jsDocTags: ts.Node[]
-    /**
-     * Of the `jsDocTags`, the @example tag comments. Comments without code blocks are assumed to be typescript codeblocks
-     */
-    examples: string[]
+    jsDoc: JSDocInfo
+
     /**
      * Subsidiary documentation nodes when the node has members which
      * are themselves represented as documentation nodes.
@@ -117,12 +200,8 @@ class DocItem<T extends ts.Node> {
      * @param name The name for this doc item.
      * @param sf The source file which defined this item.
      */
-    constructor(public item: T, public name: string, public sf: ts.SourceFile) {
-        const r = getJsDoc(item)
-        this.jsDoc = r.jsDoc
-        this.jsDocTags = r.tags
-        this.examples = r.examples
-        this.isPrivate = r.tags.some(t => t.kind === ts.SyntaxKind.JSDocPrivateTag)
+    constructor(public item: T, public name: string, public sf: ts.SourceFile, public parent?: DocItem<ts.Node>) {
+        this.jsDoc = getJsDocInfo(item, name, parent)
     }
 }
 
@@ -136,12 +215,12 @@ abstract class DocBase<T extends ts.Node> {
 
     abstract filterItem(s: ts.Node) : T[]
 
-    tryAddItem(s: ts.Node, sf: ts.SourceFile) {
+    tryAddItem(s: ts.Node, sf: ts.SourceFile, parent?: DocItem<ts.Node>) {
         const items = this.filterItem(s)
         
         for (const item of items) {
-            const docItem = new DocItem(item, this.getName(item, sf), sf)
-            if (!docItem.isPrivate || this.sup.nothingPrivate) {
+            const docItem = new DocItem(item, this.getName(item, sf), sf, parent)
+            if (!docItem.jsDoc.isPrivate || this.sup.nothingPrivate) {
                 docItem.memberDocs = this.extractMemberDocs(docItem)
                 for (const md of docItem.memberDocs) {
                     md.docItems.sort((a, b) => a.name < b.name ? -1 : a.name === b.name ? 0 : 1)
@@ -216,16 +295,16 @@ abstract class DocBase<T extends ts.Node> {
      */
     toMarkDown(docItem: DocItem<T>) : string {
        let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}\n\n`
-       if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
-            md += `${this.sup.headingLevelMd(4)} Description\n\n`
-            for (const d of docItem.jsDoc) {
-                if (d['comment'])
-                    md += `${d['comment']}\n\n`
-            }
+
+       md += this.commentsDetails(docItem)
+       
+       md += this.examplesDetails(docItem)
+       
+       const mdts = this.toMarkDownTs(docItem)
+       if (mdts) {
+            md += '```ts\n' + mdts + '\n```\n\n'
        }
-       md += '```ts\n'
-       md += this.toMarkDownTs(docItem)
-       md += '\n```\n\n'
+
        const details = this.toMarkDownDetails(docItem) 
        if (details) {
             md += `<details>\n\n<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>\n\n`
@@ -248,8 +327,7 @@ abstract class DocBase<T extends ts.Node> {
      */
     toMarkDownTs(docItem: DocItem<T>) : string {
         let item = docItem.item
-        if (item['initializer'] && docItem.jsDocTags.some(t => t.kind === ts.SyntaxKind.JSDocTag
-            && (t as ts.JSDocTag).tagName.escapedText === 'privateinitializer')) {
+        if (item['initializer'] && docItem.jsDoc.privateInitializer) {
             item = { ...item }
             item['initializer'] = undefined
         }
@@ -275,6 +353,66 @@ abstract class DocBase<T extends ts.Node> {
         const modFlags = ts.getCombinedModifierFlags(item)
         const hasExportFlag = !!(modFlags & ts.ModifierFlags.Export)
         return hasExportFlag
+    }
+
+    argumentsDetails(docItem: DocItem<T>) : string {
+        let md = ''
+        if (docItem.jsDoc.params.length > 0) {
+            md += `Argument Details\n\n`
+            for (const tag of docItem.jsDoc.params) {
+                const name = tag.name.getText(docItem.sf)
+                let comment = tag.comment
+                if (typeof comment === 'string') {
+                    if (comment?.indexOf('- ') === 0)
+                        // remove leading '- ' if present
+                        comment = comment.slice(2)
+                    md += `+ **${name}**\n  + ${comment}\n`
+                }
+            }
+            md += '\n'
+        }
+        return md
+    }
+
+    returnsDetails(docItem: DocItem<T>) : string {
+        let md = ''
+        if (docItem.jsDoc.returns.length > 0) {
+            md += `Returns\n\n`
+            for (const t of docItem.jsDoc.returns) {
+                md += `${t.comment}\n\n`
+            }
+        }
+        return md
+    }
+
+    throwsDetails(docItem: DocItem<T>) : string {
+        let md = ''
+        if (docItem.jsDoc.throws.length > 0) {
+            md += `Throws\n\n`
+            for (const tag of docItem.jsDoc.throws) {
+                md += `${tag.comment}\n\n`
+            }
+        }
+        return md
+    }
+
+    examplesDetails(docItem: DocItem<T>) : string {
+        let md = ''
+        if (docItem.jsDoc.examples.length > 0) {
+            md += `Example${docItem.jsDoc.examples.length > 1 ? 's' : ''}\n\n`
+            for (const e of docItem.jsDoc.examples) {
+                md += `${e}\n`
+            }
+        }
+        return md
+    }
+
+    commentsDetails(docItem: DocItem<T>) : string {
+        let md = ''
+        for (const comment of docItem.jsDoc.comments) {
+            md += `${comment}\n\n`
+        }
+        return md
     }
 }
 
@@ -332,8 +470,8 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
         const printer = this.sup.printer
         
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
-        if (n.body && !docItem.jsDocTags.some(t => t.kind === ts.SyntaxKind.JSDocTag
-            && (t as ts.JSDocTag).tagName.escapedText === 'publicbody')) {
+        if (n.body && !docItem.jsDoc.publicBody) {
+            // Remove the function body
             const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n.body, sf)
             mdts = mdts.slice(0, mdts.length - bodyts.length)
         }
@@ -343,35 +481,12 @@ class DocFunction extends DocBase<ts.FunctionDeclaration> {
     override toMarkDownDetails(docItem: DocItem<ts.FunctionDeclaration>) : string {
         let md = ''
 
-        const returnsTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocReturnTag)
-            .map(t => t as ts.JSDocReturnTag)
-            .filter(t => !!t.comment)
-        if (returnsTags.length > 0) {
-            md += `${this.sup.headingLevelMd(4)} Returns\n\n`
-            for (const t of returnsTags) {
-                const rt = t as ts.JSDocReturnTag
-                md += `${rt.comment}\n\n`
-            }
-        }
-        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
-        if (paramTags.length > 0) {
-            
-            for (const tag of paramTags) {
-                const name = tag.name.getText(docItem.sf)
-                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}`
-            }
+        md += this.returnsDetails(docItem)
+        
+        md += this.argumentsDetails(docItem)
 
-        }
+        md += this.throwsDetails(docItem)
 
-        const throwTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocThrowsTag).map(t => t as ts.JSDocThrowsTag).filter(t => t.comment)
-        if (throwTags.length > 0) {
-            
-            for (const tag of throwTags) {
-                const name = 'foo'
-                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}`
-            }
-
-        }
         return md
     }
 }
@@ -389,6 +504,23 @@ class DocProperty extends DocBase<ts.PropertyDeclaration> {
         if (ts.isPropertyDeclaration(item) && this.isNotPrivate(item))
             return [item]
         return []
+    }
+
+    override toMarkDownDetails(docItem: DocItem<ts.PropertyDeclaration>) : string {
+        let md = ''
+
+        md += this.examplesDetails(docItem)
+
+        const comments = this.commentsDetails(docItem)
+
+        if (md || comments) {
+            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
+            let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}\n\n`
+            if (comments) intro += comments
+            md = `${intro}${mdts}\n${md}`
+        }
+
+        return md
     }
 }
 
@@ -411,7 +543,7 @@ class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
         const printer = this.sup.printer
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
 
-        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDocTags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody'))) {
+        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDoc.publicBody)) {
             // Remove the body from documentation typescript
             const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n['body'], sf)
             mdts = this.removeTs(mdts, bodyts)
@@ -422,20 +554,19 @@ class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
     override toMarkDownDetails(docItem: DocItem<ts.ConstructorDeclaration>) : string {
         let md = ''
 
-        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
-        if (paramTags.length > 0) {
-            for (const tag of paramTags) {
-                const name = tag.name.getText(docItem.sf)
-                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
-            }
-        }
+        md += this.argumentsDetails(docItem)
 
-        const throwTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocThrowsTag).map(t => t as ts.JSDocThrowsTag).filter(t => t.comment)
-        if (throwTags.length > 0) {
-            for (const tag of throwTags) {
-                const name = 'foo'
-                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}`
-            }
+        md += this.throwsDetails(docItem)
+
+        md += this.examplesDetails(docItem)
+
+        const comments = this.commentsDetails(docItem)
+
+        if (md || comments) {
+            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
+            let intro = `${this.sup.headingLevelMd(4)} Constructor\n\n`
+            if (comments) intro += comments
+            md = `${intro}${mdts}\n${md}`
         }
 
         return md
@@ -463,7 +594,7 @@ class DocMethod extends DocBase<ts.MethodDeclaration> {
         const printer = this.sup.printer
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
 
-        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDocTags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody'))) {
+        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDoc.publicBody)) {
             // Remove the body from documentation typescript
             const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n['body'], sf)
             mdts = this.removeTs(mdts, bodyts)
@@ -474,30 +605,21 @@ class DocMethod extends DocBase<ts.MethodDeclaration> {
     override toMarkDownDetails(docItem: DocItem<ts.MethodDeclaration>) : string {
         let md = ''
 
-        const returnsTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocReturnTag)
-            .map(t => t as ts.JSDocReturnTag)
-            .filter(t => !!t.comment)
-        if (returnsTags.length > 0) {
-            md += `${this.sup.headingLevelMd(5)} Returns\n\n`
-            for (const t of returnsTags) {
-                const rt = t as ts.JSDocReturnTag
-                md += `${rt.comment}\n\n`
-            }
-        }
-        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
-        if (paramTags.length > 0) {
-            md += `${this.sup.headingLevelMd(5)} Arguments\n\n`
-            for (const tag of paramTags) {
-                const name = tag.name.getText(docItem.sf)
-                md += `${this.sup.headingLevelMd(6)} ${name}\n\n${tag.comment}\n\n`
-            }
-        }
+        md += this.returnsDetails(docItem)
 
-        if (docItem.examples.length > 0) {
-            md += `${this.sup.headingLevelMd(5)} Examples\n\n`
-            for (const e of docItem.examples) {
-                md += `${e}\n`
-            }
+        md += this.argumentsDetails(docItem)
+
+        md += this.throwsDetails(docItem)
+
+        md += this.examplesDetails(docItem)
+
+        const comments = this.commentsDetails(docItem)
+
+        if (md || comments) {
+            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
+            let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}\n\n`
+            if (comments) intro += comments
+            md = `${intro}${mdts}\n${md}`
         }
 
         return md
@@ -530,7 +652,7 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
 
         for (const ce of n.members) {
             for (const doc of docs) {
-                doc.tryAddItem(ce, sf)
+                doc.tryAddItem(ce, sf, docItem)
             }
         }
         
@@ -547,7 +669,7 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
         // class definition typescript including all members and function bodies...
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
         for (const ce of n.members) {
-            const r = getJsDoc(ce)
+            const r = getJsDocInfo(ce, docItem.name)
             let isPrivate = false
             if (!this.sup.nothingPrivate &&
                 ((ce['modifiers'] && ce['modifiers'].some(m => m.kind === ts.SyntaxKind.PrivateKeyword)) ||
@@ -556,11 +678,11 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
                 // Remove entire member
                 const memberts = printer.printNode(ts.EmitHint.Unspecified, ce, sf)
                 mdts = this.removeTs(mdts, memberts, true)
-            } else if (ce['body'] && !r.tags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody')) {
+            } else if (ce['body'] && !r.publicBody) {
                 // Remove the body from documentation typescript
                 const bodyts  = printer.printNode(ts.EmitHint.Unspecified, ce['body'], sf)
                 mdts = this.removeTs(mdts, bodyts)
-            } else if (ce['initializer'] && r.tags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'privateinitializer')) {
+            } else if (ce['initializer'] && r.privateInitializer) {
                 const initializerts  = printer.printNode(ts.EmitHint.Unspecified, ce['initializer'], sf)
                 mdts = this.removeTs(mdts, `= ${initializerts};`)
             }
@@ -568,33 +690,17 @@ class DocClass extends DocBase<ts.ClassDeclaration> {
         return mdts
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>): string {
         let md = ''
 
         for (const doc of docItem.memberDocs) {
-            
             for (const item of doc.docItems) {
-               const itemName = item.name === 'constructor' ? '' : item.name
-               md += `${this.sup.headingLevelMd(4)} ${this.label} ${docItem.name} ${doc.label} ${itemName}\n\n`
-
-               if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
-                    for (const d of item.jsDoc) {
-                        if (d['comment'])
-                            md += `${d['comment']}\n\n`
-                    }
-               }
-               md += '```ts\n'
-               md += doc.toMarkDownTs(item)
-               md += '\n```\n\n'
-               const details = doc.toMarkDownDetails(item) 
-               if (details) {
-                    md += `<details>\n\n<summary>${this.label} ${docItem.name} ${doc.label} ${itemName} ${doc.detailsLabel}</summary>\n\n`
+                const details = doc.toMarkDownDetails(item)
+                if (details)
                     md += details
-                    md += `</details>\n\n`
-               }
             }
         }
-        
+
         return md
     }
 }
@@ -612,6 +718,23 @@ class DocPropertySignature extends DocBase<ts.PropertySignature> {
         if (ts.isPropertySignature(item) && this.isNotPrivate(item))
             return [item]
         return []
+    }
+
+    override toMarkDownDetails(docItem: DocItem<ts.PropertySignature>) : string {
+        let md = ''
+
+        md += this.examplesDetails(docItem)
+
+        const comments = this.commentsDetails(docItem)
+
+        if (md || comments) {
+            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
+            let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}\n\n`
+            if (comments) intro += comments
+            md = `${intro}${mdts}\n${md}`
+        }
+
+        return md
     }
 }
 
@@ -636,7 +759,7 @@ class DocMethodSignature extends DocBase<ts.MethodSignature> {
         const printer = this.sup.printer
         let mdts = printer.printNode(ts.EmitHint.Unspecified, n, sf)
 
-        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDocTags.some(t => (t as ts.JSDocTag).tagName.escapedText === 'publicbody'))) {
+        if (n['body'] && !(this.sup.nothingPrivate || docItem.jsDoc.publicBody)) {
             // Remove the body from documentation typescript
             const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n['body'], sf)
             mdts = this.removeTs(mdts, bodyts)
@@ -647,25 +770,23 @@ class DocMethodSignature extends DocBase<ts.MethodSignature> {
     override toMarkDownDetails(docItem: DocItem<ts.MethodSignature>) : string {
         let md = ''
 
-        const returnsTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocReturnTag)
-            .map(t => t as ts.JSDocReturnTag)
-            .filter(t => !!t.comment)
-        if (returnsTags.length > 0) {
-            md += `${this.sup.headingLevelMd(5)} Returns\n\n`
-            for (const t of returnsTags) {
-                const rt = t as ts.JSDocReturnTag
-                md += `${rt.comment}\n\n`
-            }
-        }
-        const paramTags = docItem.jsDocTags.filter(t => t.kind === ts.SyntaxKind.JSDocParameterTag).map(t => t as ts.JSDocParameterTag).filter(t => t.comment)
-        if (paramTags.length > 0) {
-            
-            for (const tag of paramTags) {
-                const name = tag.name.getText(docItem.sf)
-                md += `${this.sup.headingLevelMd(5)} ${name}\n\n${tag.comment}\n\n`
-            }
+        md += this.returnsDetails(docItem)
 
+        md += this.argumentsDetails(docItem)
+
+        md += this.throwsDetails(docItem)
+
+        md += this.examplesDetails(docItem)
+
+        const comments = this.commentsDetails(docItem)
+
+        if (md || comments) {
+            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
+            let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}\n\n`
+            if (comments) intro += comments
+            md = `${intro}${mdts}\n${md}`
         }
+
         return md
     }
 }
@@ -695,7 +816,7 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
 
         for (const ce of n.members) {
             for (const doc of docs) {
-                doc.tryAddItem(ce, sf)
+                doc.tryAddItem(ce, sf, docItem)
             }
         }
         
@@ -708,29 +829,13 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
         let md = ''
 
         for (const doc of docItem.memberDocs) {
-            
             for (const item of doc.docItems) {
-               const itemName = item.name
-               md += `${this.sup.headingLevelMd(4)} ${this.label} ${docItem.name} ${doc.label} ${itemName}\n\n`
-
-               if (docItem.jsDoc.some(d => d.kind === ts.SyntaxKind.JSDoc)) {
-                    for (const d of item.jsDoc) {
-                        if (d['comment'])
-                            md += `${d['comment']}\n\n`
-                    }
-               }
-               md += '```ts\n'
-               md += doc.toMarkDownTs(item)
-               md += '\n```\n\n'
-               const details = doc.toMarkDownDetails(item) 
-               if (details) {
-                    md += `<details>\n\n<summary>${this.label} ${docItem.name} ${doc.label} ${itemName} ${doc.detailsLabel}</summary>\n\n`
+                const details = doc.toMarkDownDetails(item)
+                if (details)
                     md += details
-                    md += `</details>\n\n`
-               }
             }
         }
-        
+
         return md
     }
 }
