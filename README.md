@@ -8,6 +8,8 @@ Many JSDoc tags are ignored as not relevant to this objective. Some custom tags 
 
 For a full featured, fine grain typescript documentation generator see [TypeDoc](https://typedoc.org/)
 
+A good starting point in the API doc is the [ts2md function](#function-ts2md) and then the [Ts2Md class](#class-ts2md).
+
 ## Supported JSDoc Tags
 
 The following JSDoc tags are supported:
@@ -55,6 +57,9 @@ automatically updating documentation before publishing your package:
     "prepublish": "npm run build && npx ts2md",
   }
 ```
+
+A good starting point in the API doc is the [ts2md function](#function-ts2md) and then the [Ts2Md class](#class-ts2md).
+
 ## API
 
 <!--#region ts2md-api-merged-here-->
@@ -171,11 +176,21 @@ and merging JSDoc style documentation comments.
 
 The following JSDoc tags are supported:
 
-   `@publicbody` Applied to a class method or function. Adds the function body to the documentation with embedded comments removed.
+   `@example` Adds example as code block or comments and embedded code block(s).
 
-   `@private` Applied to an exported or publicly accessible member keeps it out of documentation.
+   `@param` Adds comment for function or method parameter.
 
-   `@privateinitializer` Applied to a class property with an initializer will prevent the initializer from appearing in the documentation.
+   `@private` Hides an otherwise accessible documentation item.
+
+   `@privateinitializer` Hides property initializer from documentation typescript.
+
+   `@property` Adds comment for class or interface property parameter in parent's JSDoc comment.
+
+   `@publicbody` Overrides the normal hidding of method and function bodies.
+
+   `@returns` Adds comment for function or method return value.
+
+   `@throws` Adds thrown error comment to function or method.
 
 ```ts
 export class Ts2Md implements DocGenSupportApi {

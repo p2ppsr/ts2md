@@ -856,11 +856,21 @@ interface DocGenSupportApi {
  * 
  * The following JSDoc tags are supported:
  * 
- *    `@publicbody` Applied to a class method or function. Adds the function body to the documentation with embedded comments removed.
- * 
- *    `@private` Applied to an exported or publicly accessible member keeps it out of documentation.
- * 
- *    `@privateinitializer` Applied to a class property with an initializer will prevent the initializer from appearing in the documentation.
+ *    `@example` Adds example as code block or comments and embedded code block(s).
+ *
+ *    `@param` Adds comment for function or method parameter.
+ *
+ *    `@private` Hides an otherwise accessible documentation item.
+ *
+ *    `@privateinitializer` Hides property initializer from documentation typescript.
+ *
+ *    `@property` Adds comment for class or interface property parameter in parent's JSDoc comment.
+ *
+ *    `@publicbody` Overrides the normal hidding of method and function bodies.
+ *
+ *    `@returns` Adds comment for function or method return value.
+ *
+ *    `@throws` Adds thrown error comment to function or method.
  */
 export class Ts2Md implements DocGenSupportApi {
 
