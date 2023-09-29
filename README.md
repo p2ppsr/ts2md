@@ -2,6 +2,12 @@
 
 Simple Typescript Documentation in `README.md`` Generator
 
+The focus of this generator is single output file, low effort, low maintenance, high accuracy API documentation generation.
+
+Many JSDoc tags are ignored as not relevant to this objective. Some custom tags have been added.
+
+For a full featured, fine grain typescript documentation generator see [TypeDoc](https://typedoc.org/)
+
 ## Installation
 
 ```bash
