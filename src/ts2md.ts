@@ -840,6 +840,87 @@ class DocInterface extends DocBase<ts.InterfaceDeclaration> {
     }
 }
 
+class DocEnumMember extends DocBase<ts.EnumMember> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Member', 'Members') }
+
+    override getName(item: ts.EnumMember): string {
+        if (ts.isIdentifier(item.name))
+            return item.name.text
+        return ''
+    }
+
+    override filterItem(item: ts.Node): ts.EnumMember[] {
+        if (ts.isEnumMember(item) && this.isNotPrivate(item))
+            return [item]
+        return []
+    }
+
+    override toMarkDownDetails(docItem: DocItem<ts.EnumMember>) : string {
+        let md = ''
+
+        md += this.examplesDetails(docItem)
+
+        const comments = this.commentsDetails(docItem)
+
+        if (md || comments) {
+            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
+            let intro = `${this.sup.headingLevelMd(4)} Member ${docItem.name}\n\n`
+            if (comments) intro += comments
+            md = `${intro}${mdts}\n${md}`
+        }
+
+        return md
+    }
+}
+
+class DocEnum extends DocBase<ts.EnumDeclaration> {
+    constructor(sup: DocGenSupportApi) { super(sup, 'Enum', 'Enums') }
+
+    override getName(item: ts.EnumDeclaration): string {
+        return item.name.text
+    }
+
+    override filterItem(item: ts.Node): ts.EnumDeclaration[] {
+        if (ts.isEnumDeclaration(item) &&
+            (this.sup.nothingPrivate || this.isExportedDeclaration(item)))
+            return [item]
+        return []
+    }
+
+    override extractMemberDocs(docItem: DocItem<ts.EnumDeclaration>) : DocBase<ts.Node>[] {
+        const n = docItem.item
+        const sf = docItem.sf
+
+        let docs: DocBase<ts.Node>[] = [
+            new DocEnumMember(this.sup)
+        ]
+
+        for (const ce of n.members) {
+            for (const doc of docs) {
+                doc.tryAddItem(ce, sf, docItem)
+            }
+        }
+        
+        // Eliminate empty doc categories
+        docs = docs.filter(d => d.docItems.length > 0)
+        return docs
+    }
+    
+    override toMarkDownDetails(docItem: DocItem<ts.EnumDeclaration>) : string {
+        let md = ''
+
+        for (const doc of docItem.memberDocs) {
+            for (const item of doc.docItems) {
+                const details = doc.toMarkDownDetails(item)
+                if (details)
+                    md += details
+            }
+        }
+
+        return md
+    }
+}
+
 interface DocGenSupportApi {
     printer: ts.Printer
     nothingPrivate: boolean
@@ -974,6 +1055,7 @@ export class Ts2Md implements DocGenSupportApi {
             new DocClass(this),
             new DocFunction(this),
             new DocType(this),
+            new DocEnum(this),
             new DocVariable(this)
         ]
 
