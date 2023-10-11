@@ -1,8 +1,0 @@
-{
-    "inputFilename": "./test/enum.test.ts",
-    "outputFilename": "./apiDoc.md",
-    "firstHeadingLevel": 1,
-    "noTitle": false,
-    "outputReplace": true,
-    "readmeMerge": false
-}

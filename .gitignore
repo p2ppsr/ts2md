@@ -6,3 +6,5 @@ tsconfig.tsbuildinfo
 .DS_Store
 apiDoc.md
 ts2md.json
+test/nested/enum.test.md
+test/nested/dojo-base.md
