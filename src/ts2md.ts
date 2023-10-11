@@ -31,7 +31,17 @@ import { TypescriptToMarkdown } from "./TypescriptToMarkdown";
  * ```
  * 
  * 4. Finally examines command line arguments which are treated as overrides of the options determined
- * by steps 1, 2, 3. Command line arguments can be provided as either `--inputFilename ../index.ts` or `--inputFilename=../index.ts`
+ * by steps 1, 2, 3. Command line arguments can be provided as either:
+ * 
+ * ```
+ * --inputFilename ../index.ts
+ * ```
+ *
+ * or
+ *
+ * ```
+ * --inputFilename=../index.ts
+ * ```
  * 
  * @param options Optional options to control markdown generation.
  * @publicbody

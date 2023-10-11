@@ -808,7 +808,17 @@ Default options are:
 ```
 
 4. Finally examines command line arguments which are treated as overrides of the options determined
-by steps 1, 2, 3. Command line arguments can be provided as either `--inputFilename ../index.ts` or `--inputFilename=../index.ts`
+by steps 1, 2, 3. Command line arguments can be provided as either:
+
+```
+--inputFilename ../index.ts
+```
+
+or
+
+```
+--inputFilename=../index.ts
+```
 
 ```ts
 export function ts2md(options?: Ts2MdOptions): void {
