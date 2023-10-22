@@ -70,7 +70,7 @@ export class DocFunction extends DocBase<ts.FunctionDeclaration> {
         if (n.body && !docItem.jsDoc.publicBody) {
             // Remove the function body
             const bodyts  = printer.printNode(ts.EmitHint.Unspecified, n.body, sf)
-            mdts = mdts.slice(0, mdts.length - bodyts.length)
+            mdts = this.removeTs(mdts, bodyts)
         }
         return mdts
     }
