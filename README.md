@@ -63,6 +63,7 @@ A good starting point in the API doc is the [ts2md function](#function-ts2md) an
 ## API
 
 <!--#region ts2md-api-merged-here-->
+
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
 ### Interfaces

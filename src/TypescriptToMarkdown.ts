@@ -1,3 +1,4 @@
+import { EOL } from "os"
 import * as fs from "fs";
 import * as path from "path";
 import ts from "typescript";
@@ -35,12 +36,14 @@ import { DocClass, DocEnum, DocFunction, DocInterface, DocType, DocVariable } fr
 export class TypescriptToMarkdown implements DocGenSupportApi {
 
     private program: ts.Program;
+
     /**
      * @private
      */
     printer: ts.Printer;
     private sourceFiles: ts.SourceFile[] = [];
     private docs: DocBase<ts.Node>[] = [];
+
     /**
      * @private
      */
@@ -69,7 +72,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
      * @param options Must be provided. inputFilename defaults to `./src/index.ts`
      */
     constructor(public options: Ts2MdOptions) {
-
+        
         options.inputFilename ||= './src/index.ts';
         this.nothingPrivate = options.nothingPrivate || false;
 
@@ -88,7 +91,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         this.program = ts.createProgram(progOpts);
 
         const printOpts: ts.PrinterOptions = {
-            newLine: ts.NewLineKind.LineFeed,
+            newLine: EOL === '\n' ? ts.NewLineKind.LineFeed : ts.NewLineKind.CarriageReturnLineFeed,
             removeComments: true,
             omitTrailingSemicolon: true
         };
@@ -158,32 +161,32 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         let md = '';
 
         if (!this.options.noTitle) {
-            md += `${this.headingLevelMd(1)} API\n\n`;
+            md += `${this.headingLevelMd(1)} API${EOL}${EOL}`;
         } else {
-            md += '\n';
+            md += EOL;
         }
 
         let linksMd = `Links: [API](#api)`;
         for (const doc of docs) {
             linksMd += `, [${doc.labelPlural}](#${doc.labelPlural.toLowerCase()})`;
         }
-        linksMd += '\n\n';
+        linksMd += EOL + EOL;
 
         md += linksMd;
 
         for (const doc of this.docs) {
 
-            md += `${this.headingLevelMd(2)} ${doc.labelPlural}\n\n`;
+            md += `${this.headingLevelMd(2)} ${doc.labelPlural}` + EOL + EOL;
 
             if (doc.docItems.length > 1) {
                 md += this.generateDocItemLinksTable(doc);
-                md += `\n${linksMd}---\n\n`;
+                md += EOL + `${linksMd}---` + EOL + EOL;
             }
 
             for (const docItem of doc.docItems) {
                 md += doc.toMarkDown(docItem);
                 md += linksMd;
-                md += '---\n';
+                md += '---' + EOL;
             }
         }
 
@@ -204,9 +207,9 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         let cols = 1, rows = nameLinks.length;
         while (cols < 3 && rows > 12) { cols++; rows = Math.ceil(nameLinks.length / cols); }
 
-        for (let col = 1; col <= cols; col++) { md += '| '; } md += '|\n';
+        for (let col = 1; col <= cols; col++) { md += '| '; } md += '|' + EOL;
 
-        for (let col = 1; col <= cols; col++) { md += '| --- '; } md += '|\n';
+        for (let col = 1; col <= cols; col++) { md += '| --- '; } md += '|' + EOL;
 
         for (let row = 1; row <= rows; row++) {
             for (let col = 1; col <= cols; col++) {
@@ -215,7 +218,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
                 if (col === 1) md += '|';
                 md += ` ${d} |`;
             }
-            md += '\n';
+            md += EOL + '';
         }
         return md;
     }

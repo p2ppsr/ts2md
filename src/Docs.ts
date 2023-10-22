@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { DocBase, DocGenSupportApi, DocItem, getJsDocInfo } from "./JSDocs"
 import ts from "typescript";
+import { EOL } from "os"
 
 /**
  * @private
@@ -113,10 +114,10 @@ export class DocProperty extends DocBase<ts.PropertyDeclaration> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
-            let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}\n\n`
+            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
-            md = `${intro}${mdts}\n${md}`
+            md = `${intro}${mdts}${EOL}${md}`
         }
 
         return md
@@ -165,10 +166,10 @@ export class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
-            let intro = `${this.sup.headingLevelMd(4)} Constructor\n\n`
+            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            let intro = `${this.sup.headingLevelMd(4)} Constructor${EOL}${EOL}`
             if (comments) intro += comments
-            md = `${intro}${mdts}\n${md}`
+            md = `${intro}${mdts}${EOL}${md}`
         }
 
         return md
@@ -221,10 +222,10 @@ export class DocMethod extends DocBase<ts.MethodDeclaration> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
-            let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}\n\n`
+            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
-            md = `${intro}${mdts}\n${md}`
+            md = `${intro}${mdts}${EOL}${md}`
         }
 
         return md
@@ -339,10 +340,10 @@ export class DocPropertySignature extends DocBase<ts.PropertySignature> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
-            let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}\n\n`
+            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
-            md = `${intro}${mdts}\n${md}`
+            md = `${intro}${mdts}${EOL}${md}`
         }
 
         return md
@@ -395,10 +396,10 @@ export class DocMethodSignature extends DocBase<ts.MethodSignature> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
-            let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}\n\n`
+            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
-            md = `${intro}${mdts}\n${md}`
+            md = `${intro}${mdts}${EOL}${md}`
         }
 
         return md
@@ -483,10 +484,10 @@ export class DocEnumMember extends DocBase<ts.EnumMember> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts\n' + this.toMarkDownTs(docItem) + '\n```\n'
-            let intro = `${this.sup.headingLevelMd(4)} Member ${docItem.name}\n\n`
+            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            let intro = `${this.sup.headingLevelMd(4)} Member ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
-            md = `${intro}${mdts}\n${md}`
+            md = `${intro}${mdts}${EOL}${md}`
         }
 
         return md

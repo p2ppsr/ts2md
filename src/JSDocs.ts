@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import ts from "typescript";
+import { EOL } from "os"
 
 /**
  * Parsed JSDoc info associated with a documentation item
@@ -117,7 +118,7 @@ export function getJsDocInfo(node: ts.Node, name: string, parent?: DocItem<ts.No
                     if (comment) {
                         let example: string = comment
                         if (example.indexOf('```') === -1)
-                            example = '```ts\n' + example + '\n```\n'
+                            example = '```ts' + EOL + example + EOL + '```' + EOL
                         r.examples.push(example)
                     }
                 }
@@ -213,12 +214,14 @@ export abstract class DocBase<T extends ts.Node> {
         let pos = findInTs.indexOf(targetTs)
         if (pos === -1) {
             // Try outdenting once
-            targetTs = targetTs.replace(/\n/g, '\n    ',)
+            const regex1 = EOL === '\n' ? /\n/g : /\r\n/g
+            targetTs = targetTs.replace(regex1, EOL + '    ',)
             pos = findInTs.indexOf(targetTs)
             if (pos === -1) {
                 // set and get accessor bodies sometimes are inlined in full generated class typescript
                 // remove all indenting
-                targetTs = targetTs.replace(/\n */g, ' ')
+                const regex2 = EOL === '\n' ? /\n */g : /\r\n */g
+                targetTs = targetTs.replace(regex2, ' ')
                 pos = findInTs.indexOf(targetTs)
             }
         }
@@ -228,19 +231,20 @@ export abstract class DocBase<T extends ts.Node> {
     removeTs(fromTs: string, removeTs: string, withSemi?: boolean) : string {
         const r = this.findTs(fromTs, removeTs)
         // See if we would leave a dangling semicolon behind
-        if (r.pos > -1 && withSemi && r.pos + r.len + 1 < fromTs.length && fromTs[r.pos + r.len] === ';' && fromTs[r.pos + r.len + 1] === '\n') {
-            r.len += 2
+        if (r.pos > -1 && withSemi && r.pos + r.len + EOL.length < fromTs.length && fromTs[r.pos + r.len] === ';' && fromTs.slice(r.pos + r.len + 1, r.pos + r.len + 1 + EOL.length) === EOL) {
+            r.len += 1 + EOL.length
             // and remove leading spaces
             while (r.pos > 0 && fromTs[r.pos - 1] === ' ') { r.pos--; r.len++ }
         }
         if (r.pos > -1) {
             fromTs = fromTs.slice(0, r.pos) + fromTs.slice(r.pos + r.len)
-            if (fromTs[r.pos] === '\n') {
+            // If EOL follows what we removed...
+            if (fromTs.slice(r.pos, r.pos + EOL.length) === EOL) {
                 let pos2 = r.pos -1
                 while (pos2 > 0 && fromTs[pos2] === ' ') pos2--
-                if (fromTs[pos2] === '\n') {
+                if (fromTs.slice(pos2 + 1 - EOL.length, pos2 + 1) === EOL) {
                     // and remove blank line left after original removal
-                    fromTs = fromTs.slice(0, pos2) + fromTs.slice(r.pos)
+                    fromTs = fromTs.slice(0, pos2 + 1 - EOL.length) + fromTs.slice(r.pos)
                 }
             }
         }
@@ -261,7 +265,7 @@ export abstract class DocBase<T extends ts.Node> {
      * @returns the generated markdown for this `DocItem`
      */
     toMarkDown(docItem: DocItem<T>) : string {
-       let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}\n\n`
+       let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}` + EOL + EOL
 
        md += this.commentsDetails(docItem)
        
@@ -269,14 +273,14 @@ export abstract class DocBase<T extends ts.Node> {
        
        const mdts = this.toMarkDownTs(docItem)
        if (mdts) {
-            md += '```ts\n' + mdts + '\n```\n\n'
+            md += '```ts' + EOL + mdts + EOL + '```' + EOL + EOL
        }
 
        const details = this.toMarkDownDetails(docItem) 
        if (details) {
-            md += `<details>\n\n<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>\n\n`
+            md += `<details>${EOL}${EOL}<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>` + EOL + EOL
             md += details
-            md += `</details>\n\n`
+            md += `</details>` + EOL + EOL
        }
        return md
     }
@@ -325,7 +329,7 @@ export abstract class DocBase<T extends ts.Node> {
     argumentsDetails(docItem: DocItem<T>) : string {
         let md = ''
         if (docItem.jsDoc.params.length > 0) {
-            md += `Argument Details\n\n`
+            md += `Argument Details` + EOL + EOL
             for (const tag of docItem.jsDoc.params) {
                 const name = tag.name.getText(docItem.sf)
                 let comment = tag.comment
@@ -333,10 +337,10 @@ export abstract class DocBase<T extends ts.Node> {
                     if (comment?.indexOf('- ') === 0)
                         // remove leading '- ' if present
                         comment = comment.slice(2)
-                    md += `+ **${name}**\n  + ${comment}\n`
+                    md += `+ **${name}**${EOL}  + ${comment}${EOL}`
                 }
             }
-            md += '\n'
+            md += EOL + ''
         }
         return md
     }
@@ -344,9 +348,9 @@ export abstract class DocBase<T extends ts.Node> {
     returnsDetails(docItem: DocItem<T>) : string {
         let md = ''
         if (docItem.jsDoc.returns.length > 0) {
-            md += `Returns\n\n`
+            md += `Returns` + EOL + EOL
             for (const t of docItem.jsDoc.returns) {
-                md += `${t.comment}\n\n`
+                md += `${t.comment}` + EOL + EOL
             }
         }
         return md
@@ -355,9 +359,9 @@ export abstract class DocBase<T extends ts.Node> {
     throwsDetails(docItem: DocItem<T>) : string {
         let md = ''
         if (docItem.jsDoc.throws.length > 0) {
-            md += `Throws\n\n`
+            md += `Throws` + EOL + EOL
             for (const tag of docItem.jsDoc.throws) {
-                md += `${tag.comment}\n\n`
+                md += `${tag.comment}` + EOL + EOL
             }
         }
         return md
@@ -366,9 +370,9 @@ export abstract class DocBase<T extends ts.Node> {
     examplesDetails(docItem: DocItem<T>) : string {
         let md = ''
         if (docItem.jsDoc.examples.length > 0) {
-            md += `Example${docItem.jsDoc.examples.length > 1 ? 's' : ''}\n\n`
+            md += `Example${docItem.jsDoc.examples.length > 1 ? 's' : ''}` + EOL + EOL
             for (const e of docItem.jsDoc.examples) {
-                md += `${e}\n`
+                md += `${e}${EOL}`
             }
         }
         return md
@@ -377,7 +381,7 @@ export abstract class DocBase<T extends ts.Node> {
     commentsDetails(docItem: DocItem<T>) : string {
         let md = ''
         for (const comment of docItem.jsDoc.comments) {
-            md += `${comment}\n\n`
+            md += `${comment}` + EOL + EOL
         }
         return md
     }
