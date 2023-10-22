@@ -18,15 +18,17 @@ export function mdMerge(md: string) {
 
     const preMergeMd = fs.readFileSync(mergePath, { encoding: 'utf8' })
     
-    const mergeStartAnchor = `${EOL}<!--#region ts2md-api-merged-here-->`
-    const mergeEndAnchor = `${EOL}<!--#endregion ts2md-api-merged-here-->`
+    const mergeStartAnchor = `<!--#region ts2md-api-merged-here-->`
+    const mergeEndAnchor = `<!--#endregion ts2md-api-merged-here-->`
     
-    const posStart = preMergeMd.indexOf(mergeStartAnchor)
-    const posEnd = preMergeMd.indexOf(mergeEndAnchor)
+    let posStart = preMergeMd.indexOf('\n' + mergeStartAnchor)
+    let posEnd = preMergeMd.indexOf('\n' + mergeEndAnchor)
 
     if (posStart > -1 && posEnd > -1 && posStart < posEnd) {
+        posStart++
+        posEnd++
         const mergedMd = preMergeMd.slice(0, posStart + mergeStartAnchor.length) +
-         EOL + md +
+         EOL + md + EOL +
          preMergeMd.slice(posEnd)
         try { fs.unlinkSync(mergePath) } catch { /* */ }
         fs.writeFileSync(mergePath, mergedMd)

@@ -30,8 +30,9 @@
     "build": "tsc --build",
     "build:readme": "npm run build && node ./out/src/ts2md.js",
     "test": "npm run build && node out/src/ts2md.js --outputFilename=./test/nested/apiDoc.md",
+    "test:enum": "npm run build && node out/src/ts2md.js --inputFilename ./test/enum.test.ts --outputFilename ./test/nested/enum.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
     "test:dojo": "npm run build && node out/src/ts2md.js --inputFilename ../../dojo/dojo-base/src/index.ts --outputFilename ./test/nested/dojo-base.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
-    "test:enum": "npm run build && node out/src/ts2md.js --inputFilename ./test/enum.test.ts --outputFilename ./test/nested/enum.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false"
+    "test:cwi-base": "npm run build && node out/src/ts2md.js --inputFilename ../../dojo/cwi-base/src/index.ts --outputFilename ./test/nested/cwi-base.md --firstHeadingLevel 2 --noTitle true --readmeMerge true"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
