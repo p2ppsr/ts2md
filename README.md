@@ -1,6 +1,64 @@
-# cwi-base
+# ts2md
 
-Base classes, types, utilities for implementation support of CWI components, Project Babbage applications and services.
+Simple Typescript Documentation in `README.md` Generator
+
+The focus of this generator is single output file, low effort, low maintenance, high accuracy API documentation generation.
+
+Many JSDoc tags are ignored as not relevant to this objective. Some custom tags have been added.
+
+For a full featured, fine grain typescript documentation generator see [TypeDoc](https://typedoc.org/)
+
+A good starting point in the API doc is the [ts2md function](#function-ts2md) and then the [TypescriptToMarkDown class](#class-typescripttomarkdown).
+
+## Supported JSDoc Tags
+
+The following JSDoc tags are supported:
+
+| Tag | Description |
+|---|---|
+| @example | Adds example as code block or comments and embedded code block(s). |
+| @param | Adds comment for function or method parameter. |
+| @private | Hides an otherwise accessible documentation item. |
+| @privateinitializer | Hides property initializer from documentation typescript. |
+| @property | Adds comment for class or interface property parameter in parent's JSDoc comment. |
+| @publicbody | Overrides the normal hidding of method and function bodies. |
+| @returns | Adds comment for function or method return value. |
+| @throws | Adds thrown error comment to function or method. |
+
+## Installation
+
+```bash
+npm i -D ts2md
+```
+
+## Setup
+
+After installation, use the following command to run markdown generation:
+
+```bash
+npx ts2md
+```
+
+Which will also remind you to add merge anchors in your `README.md` file:
+
+```md
+  <!--#region ts2md-api-merged-here-->
+  <!--#endregion ts2md-api-merged-here-->
+```
+
+The anchors must not be indented where you wish to merge the generated documentation.
+
+You may also want to add a script to `package.json` as a reminder and to support
+automatically updating documentation before publishing your package:
+
+```json
+  "scripts": {
+    "build:readme": "npx ts2md",
+    "prepublish": "npm run build && npx ts2md",
+  }
+```
+
+A good starting point in the API doc is the [ts2md function](#function-ts2md) and then the [Ts2Md class](#class-ts2md).
 
 ## API
 
