@@ -91,12 +91,24 @@ export interface Ts2MdOptions {
     outputReplace: boolean;
     readmeMerge: boolean;
     nothingPrivate?: boolean;
+    filenameSubString?: string;
 }
 ```
 
 <details>
 
 <summary>Interface Ts2MdOptions Details</summary>
+
+##### Property filenameSubString
+
+If specified, only symbols defined in files with this value as a substring
+are included in generated markdown.
+
+'/' must be used as the folder separator.
+
+```ts
+filenameSubString?: string
+```
 
 ##### Property firstHeadingLevel
 
@@ -875,6 +887,9 @@ export function ts2md(options?: Ts2MdOptions): void {
                 break;
             case "nothingPrivate":
                 options.nothingPrivate = (v === "true");
+                break;
+            case "filenameSubString":
+                options.filenameSubString = v;
                 break;
             default: break;
         }

@@ -45,4 +45,11 @@ export interface Ts2MdOptions {
      * CAUTION: This setting is inappropriate for published documentation ;-)
      */
     nothingPrivate?: boolean;
+    /**
+     * If specified, only symbols defined in files with this value as a substring
+     * are included in generated markdown.
+     * 
+     * '/' must be used as the folder separator.
+     */
+    filenameSubString?: string
 }

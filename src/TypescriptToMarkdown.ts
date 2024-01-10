@@ -4,7 +4,7 @@ import * as path from "path";
 import ts from "typescript";
 import { mdMerge } from "./mdMerge";
 import { Ts2MdOptions } from "./Ts2MdOptions";
-import { DocBase, DocGenSupportApi } from "./JSDocs";
+import { DocBase, DocGenSupportApi, DocItem } from "./JSDocs";
 import { DocClass, DocEnum, DocFunction, DocInterface, DocType, DocVariable } from "./Docs";
 
 /**
@@ -142,7 +142,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         ];
 
         for (const sf of sourceFiles) {
-            console.log(`SourceFile ${sf.fileName}`);
+            //console.log(`SourceFile ${sf.fileName}`);
             ts.forEachChild(sf, node => {
                 if (ts.isStatement(node)) {
                     for (const doc of docs) {
@@ -159,6 +159,27 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
 
     private generateMarkDown(docs: DocBase<ts.Node>[]): string {
         let md = '';
+
+        if (this.options.filenameSubString) {
+            const ignored = {}
+            for (const doc of this.docs) {
+                const filteredItems: DocItem<ts.Node>[] = []
+                for (const docItem of doc.docItems) {
+                    const fn = docItem.sf.fileName
+                    const add = fn.indexOf(this.options.filenameSubString || '') > -1
+                    if (add) {
+                        filteredItems.push(docItem)
+                        //console.log(`Adding ${fn} ${docItem.name}`)
+                    } else {
+                        if (!ignored[fn]) {
+                            //console.log(`Ignoring ${fn}`)
+                            ignored[docItem.sf.fileName] = true
+                        }
+                    }
+                }
+                doc.docItems = filteredItems
+            }
+        }
 
         if (!this.options.noTitle) {
             md += `${this.headingLevelMd(1)} API${EOL}${EOL}`;

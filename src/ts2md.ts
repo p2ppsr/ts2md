@@ -84,6 +84,7 @@ export function ts2md(options?: Ts2MdOptions) : void {
             case 'outputReplace': options.outputReplace = (v === 'true'); break
             case 'readmeMerge': options.readmeMerge = (v === 'true'); break
             case 'nothingPrivate': options.nothingPrivate = (v === 'true'); break
+            case 'filenameSubString': options.filenameSubString = v; break
             default: break
         }
     }

@@ -33,7 +33,9 @@
     "test:enum": "npm run build && node out/src/ts2md.js --inputFilename ./test/enum.test.ts --outputFilename ./test/nested/enum.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
     "test:function": "npm run build && node out/src/ts2md.js --inputFilename ./test/function.test.ts --outputFilename ./test/nested/function.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
     "test:dojo": "npm run build && node out/src/ts2md.js --inputFilename ../../dojo/dojo-base/src/index.ts --outputFilename ./test/nested/dojo-base.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
-    "test:cwi-base": "npm run build && node out/src/ts2md.js --inputFilename ../../dojo/cwi-base/src/index.ts --outputFilename ./test/nested/cwi-base.md --firstHeadingLevel 2 --noTitle true --readmeMerge true"
+    "test:dojoEntities": "npm run build && node out/src/ts2md.js --filenameSubString /src/Entities/ --inputFilename ../../dojo/dojo-base/src/index.ts --outputFilename ./test/nested/dojoEntities.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
+    "test:cwi-base": "npm run build && node out/src/ts2md.js --inputFilename ../../dojo/cwi-base/src/index.ts --outputFilename ./test/nested/cwi-base.md --firstHeadingLevel 2 --noTitle true --readmeMerge true",
+    "test:spend": "npm run build && node out/src/ts2md.js --inputFilename ./test/spend.test.ts --outputFilename ./test/nested/spend.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false"
   },
   "devDependencies": {
     "@types/jest": "^29.4.0",
