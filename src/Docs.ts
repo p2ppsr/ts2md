@@ -2,6 +2,7 @@
 import { DocBase, DocGenSupportApi, DocItem, getJsDocInfo } from "./JSDocs"
 import ts from "typescript";
 import { EOL } from "os"
+import { doc } from "prettier";
 
 /**
  * @private
@@ -75,7 +76,7 @@ export class DocFunction extends DocBase<ts.FunctionDeclaration> {
         return mdts
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.FunctionDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.FunctionDeclaration>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.returnsDetails(docItem)
@@ -106,7 +107,7 @@ export class DocProperty extends DocBase<ts.PropertyDeclaration> {
         return []
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.PropertyDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.PropertyDeclaration>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.examplesDetails(docItem)
@@ -114,7 +115,7 @@ export class DocProperty extends DocBase<ts.PropertyDeclaration> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            const mdts = this.toTsMarkDown(docItem, mdLinks, true)
             let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
             md = `${intro}${mdts}${EOL}${md}`
@@ -154,7 +155,7 @@ export class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
         return mdts
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.ConstructorDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.ConstructorDeclaration>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.argumentsDetails(docItem)
@@ -166,7 +167,7 @@ export class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            const mdts = this.toTsMarkDown(docItem, mdLinks, true)
             let intro = `${this.sup.headingLevelMd(4)} Constructor${EOL}${EOL}`
             if (comments) intro += comments
             md = `${intro}${mdts}${EOL}${md}`
@@ -208,7 +209,7 @@ export class DocMethod extends DocBase<ts.MethodDeclaration> {
         return mdts
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.MethodDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.MethodDeclaration>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.returnsDetails(docItem)
@@ -222,7 +223,7 @@ export class DocMethod extends DocBase<ts.MethodDeclaration> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            const mdts = this.toTsMarkDown(docItem, mdLinks, true)
             let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
             md = `${intro}${mdts}${EOL}${md}`
@@ -299,12 +300,12 @@ export class DocClass extends DocBase<ts.ClassDeclaration> {
         return mdts
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>): string {
+    override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>, mdLinks: Record<string, string>): string {
         let md = ''
 
         for (const doc of docItem.memberDocs) {
             for (const item of doc.docItems) {
-                const details = doc.toMarkDownDetails(item)
+                const details = doc.toMarkDownDetails(item, mdLinks)
                 if (details)
                     md += details
             }
@@ -332,7 +333,7 @@ export class DocPropertySignature extends DocBase<ts.PropertySignature> {
         return []
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.PropertySignature>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.PropertySignature>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.examplesDetails(docItem)
@@ -340,7 +341,7 @@ export class DocPropertySignature extends DocBase<ts.PropertySignature> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            const mdts = this.toTsMarkDown(docItem, mdLinks, true)
             let intro = `${this.sup.headingLevelMd(4)} Property ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
             md = `${intro}${mdts}${EOL}${md}`
@@ -382,7 +383,7 @@ export class DocMethodSignature extends DocBase<ts.MethodSignature> {
         return mdts
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.MethodSignature>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.MethodSignature>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.returnsDetails(docItem)
@@ -396,7 +397,7 @@ export class DocMethodSignature extends DocBase<ts.MethodSignature> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            const mdts = this.toTsMarkDown(docItem, mdLinks, true)
             let intro = `${this.sup.headingLevelMd(4)} Method ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
             md = `${intro}${mdts}${EOL}${md}`
@@ -443,12 +444,12 @@ export class DocInterface extends DocBase<ts.InterfaceDeclaration> {
         return docs
     }
     
-    override toMarkDownDetails(docItem: DocItem<ts.InterfaceDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.InterfaceDeclaration>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         for (const doc of docItem.memberDocs) {
             for (const item of doc.docItems) {
-                const details = doc.toMarkDownDetails(item)
+                const details = doc.toMarkDownDetails(item, mdLinks)
                 if (details)
                     md += details
             }
@@ -476,7 +477,7 @@ export class DocEnumMember extends DocBase<ts.EnumMember> {
         return []
     }
 
-    override toMarkDownDetails(docItem: DocItem<ts.EnumMember>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.EnumMember>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         md += this.examplesDetails(docItem)
@@ -484,7 +485,7 @@ export class DocEnumMember extends DocBase<ts.EnumMember> {
         const comments = this.commentsDetails(docItem)
 
         if (md || comments) {
-            const mdts = '```ts' + EOL + this.toMarkDownTs(docItem) + EOL + '```' + EOL
+            const mdts = this.toTsMarkDown(docItem, mdLinks, true)
             let intro = `${this.sup.headingLevelMd(4)} Member ${docItem.name}${EOL}${EOL}`
             if (comments) intro += comments
             md = `${intro}${mdts}${EOL}${md}`
@@ -530,12 +531,12 @@ export class DocEnum extends DocBase<ts.EnumDeclaration> {
         return docs
     }
     
-    override toMarkDownDetails(docItem: DocItem<ts.EnumDeclaration>) : string {
+    override toMarkDownDetails(docItem: DocItem<ts.EnumDeclaration>, mdLinks: Record<string, string>) : string {
         let md = ''
 
         for (const doc of docItem.memberDocs) {
             for (const item of doc.docItems) {
-                const details = doc.toMarkDownDetails(item)
+                const details = doc.toMarkDownDetails(item, mdLinks)
                 if (details)
                     md += details
             }

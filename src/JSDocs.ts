@@ -2,6 +2,20 @@
 import ts from "typescript";
 import { EOL } from "os"
 
+/** Regex to parse TypeScript tokens */
+const tsTokenRegex = new RegExp(
+    [
+        '(?:\\/\\/.*|\\/\\*[\\s\\S]*?\\*\\/)', // Comments
+        '("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')', // String literals
+        '(\\b\\d+(\\.\\d+)?\\b)', // Numeric literals
+        '(\\b(?:if|else|for|while|do|switch|case|break|continue|return|function|class|interface|enum|extends|implements|new|try|catch|finally|throw|void|public|protected|private|readonly|static|async|await|import|export|from|const|let|var|type|as|declare|default)\\b)', // Keywords
+        '(\\b[A-Za-z_$][A-Za-z0-9_$]*\\b)', // Identifiers
+        '([{}()\\[\\];,.:])', // Punctuation
+        '([+\\-*/%&|^!?<>]=?|={1,3}|~|=>)' // Operators
+    ].join('|'),
+    'g'
+);
+    
 /**
  * Parsed JSDoc info associated with a documentation item
  * 
@@ -174,19 +188,6 @@ export interface DocGenSupportApi {
 export abstract class DocBase<T extends ts.Node> {
     docItems: DocItem<T>[] = []
 
-    tsTokenRegex = new RegExp(
-        [
-            '(?:\\/\\/.*|\\/\\*[\\s\\S]*?\\*\\/)', // Comments
-            '("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')', // String literals
-            '(\\b\\d+(\\.\\d+)?\\b)', // Numeric literals
-            '(\\b(?:if|else|for|while|do|switch|case|break|continue|return|function|class|interface|enum|extends|implements|new|try|catch|finally|throw|void|public|protected|private|readonly|static|async|await|import|export|from|const|let|var|type|as|declare|default)\\b)', // Keywords
-            '(\\b[A-Za-z_$][A-Za-z0-9_$]*\\b)', // Identifiers
-            '([{}()\\[\\];,.:])', // Punctuation
-            '([+\\-*/%&|^!?<>]=?|={1,3}|~|=>)' // Operators
-        ].join('|'),
-        'g'
-    );
-    
     constructor(public sup: DocGenSupportApi, public label: string, public labelPlural: string, public detailsLabel = 'Details') {
     }
     
@@ -264,6 +265,29 @@ export abstract class DocBase<T extends ts.Node> {
         return fromTs
     }
 
+    toSeeAlso(docItem: DocItem<T>, mdts: string, mdLinks: Record<string, string>, tight?: boolean): string {
+        const mdtsLinks: string[] = []
+        const tokens = Array.from(mdts.matchAll(tsTokenRegex)).map(t => t[0]);
+        const linkTokens = Object.keys(mdLinks).sort((a, b) => a < b ? -1 : a === b ? 0 : 1)
+        for (const token of linkTokens) {
+            if (token !== docItem.name && tokens.indexOf(token) > -1) {
+                mdtsLinks.push(mdLinks[token])
+            }
+        }
+        let md = tight ? '' : EOL
+        if (mdtsLinks.length === 0)
+            return md
+        md += 'See also: ' + mdtsLinks.join(', ') + EOL
+        if (!tight) md += EOL
+        return md
+    }
+
+    toTsMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>, tight?: boolean): string {
+        const mdts = this.toMarkDownTs(docItem)
+        if (!mdts)
+            return ''
+        return '```ts' + EOL + mdts + EOL + '```' + EOL + this.toSeeAlso(docItem, mdts, mdLinks, tight)
+    }
 
     /**
      * Base class implementation of markdown generation for a top level typescript AST node (`DocItem`).
@@ -285,25 +309,9 @@ export abstract class DocBase<T extends ts.Node> {
        
        md += this.examplesDetails(docItem)
        
-       const mdts = this.toMarkDownTs(docItem)
-       if (mdts) {
-            const mdtsLinks: string[] = []
-            const tokens = Array.from(mdts.matchAll(this.tsTokenRegex)).map(t => t[0]);
-            const linkTokens = Object.keys(mdLinks).sort((a, b) => a < b ? -1 : a === b ? 0 : 1)
-            for (const token of linkTokens) {
-                if (token !== docItem.name && tokens.indexOf(token) > -1) {
-                    mdtsLinks.push(mdLinks[token])
-                }
-            }
-            // eslint-disable-next-line no-debugger
-            // debugger;
-            md += '```ts' + EOL + mdts + EOL + '```' + EOL + EOL
-            if (mdtsLinks.length > 0) {
-                md += 'See also: ' + mdtsLinks.join(', ') + EOL + EOL
-            }
-       }
+       md += this.toTsMarkDown(docItem, mdLinks)
 
-       const details = this.toMarkDownDetails(docItem) 
+       const details = this.toMarkDownDetails(docItem, mdLinks) 
        if (details) {
             md += `<details>${EOL}${EOL}<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>` + EOL + EOL
             md += details
@@ -341,7 +349,7 @@ export abstract class DocBase<T extends ts.Node> {
      * Base class implementation returns an empty string.
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    toMarkDownDetails(docItem: DocItem<T>) : string {
+    toMarkDownDetails(docItem: DocItem<T>, mdLinks: Record<string, string>) : string {
         return ''
     }
 
