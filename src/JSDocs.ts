@@ -173,6 +173,19 @@ export interface DocGenSupportApi {
  */
 export abstract class DocBase<T extends ts.Node> {
     docItems: DocItem<T>[] = []
+
+    tsTokenRegex = new RegExp(
+        [
+            '(?:\\/\\/.*|\\/\\*[\\s\\S]*?\\*\\/)', // Comments
+            '("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')', // String literals
+            '(\\b\\d+(\\.\\d+)?\\b)', // Numeric literals
+            '(\\b(?:if|else|for|while|do|switch|case|break|continue|return|function|class|interface|enum|extends|implements|new|try|catch|finally|throw|void|public|protected|private|readonly|static|async|await|import|export|from|const|let|var|type|as|declare|default)\\b)', // Keywords
+            '(\\b[A-Za-z_$][A-Za-z0-9_$]*\\b)', // Identifiers
+            '([{}()\\[\\];,.:])', // Punctuation
+            '([+\\-*/%&|^!?<>]=?|={1,3}|~|=>)' // Operators
+        ].join('|'),
+        'g'
+    );
     
     constructor(public sup: DocGenSupportApi, public label: string, public labelPlural: string, public detailsLabel = 'Details') {
     }
@@ -251,6 +264,7 @@ export abstract class DocBase<T extends ts.Node> {
         return fromTs
     }
 
+
     /**
      * Base class implementation of markdown generation for a top level typescript AST node (`DocItem`).
      * 
@@ -264,7 +278,7 @@ export abstract class DocBase<T extends ts.Node> {
      * 
      * @returns the generated markdown for this `DocItem`
      */
-    toMarkDown(docItem: DocItem<T>) : string {
+    toMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>) : string {
        let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}` + EOL + EOL
 
        md += this.commentsDetails(docItem)
@@ -273,7 +287,20 @@ export abstract class DocBase<T extends ts.Node> {
        
        const mdts = this.toMarkDownTs(docItem)
        if (mdts) {
+            const mdtsLinks: string[] = []
+            const tokens = Array.from(mdts.matchAll(this.tsTokenRegex)).map(t => t[0]);
+            const linkTokens = Object.keys(mdLinks).sort((a, b) => a < b ? -1 : a === b ? 0 : 1)
+            for (const token of linkTokens) {
+                if (token !== docItem.name && tokens.indexOf(token) > -1) {
+                    mdtsLinks.push(mdLinks[token])
+                }
+            }
+            // eslint-disable-next-line no-debugger
+            // debugger;
             md += '```ts' + EOL + mdts + EOL + '```' + EOL + EOL
+            if (mdtsLinks.length > 0) {
+                md += 'See also: ' + mdtsLinks.join(', ') + EOL + EOL
+            }
        }
 
        const details = this.toMarkDownDetails(docItem) 
@@ -282,6 +309,8 @@ export abstract class DocBase<T extends ts.Node> {
             md += details
             md += `</details>` + EOL + EOL
        }
+
+
        return md
     }
 

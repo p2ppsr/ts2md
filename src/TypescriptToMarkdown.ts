@@ -45,6 +45,11 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
     private docs: DocBase<ts.Node>[] = [];
 
     /**
+     * For each symbol name, the markdown link which will exist in this document.
+     */
+    private mdLinks: Record<string, string> = {}
+
+    /**
      * @private
      */
     nothingPrivate: boolean;
@@ -159,6 +164,22 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
 
     private generateMarkDown(docs: DocBase<ts.Node>[]): string {
         let md = '';
+        this.mdLinks = {}
+
+
+        for (const doc of this.docs) {
+            for (const docItem of doc.docItems) {
+                const linkMd = doc.toMarkDownRefLink(docItem)
+                this.mdLinks[docItem.name] = linkMd
+            }
+        }
+ 
+        // Sort docItems by name
+        for (const doc of docs) {
+            doc.docItems = doc.docItems.sort((a, b) => {
+                return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
+            })
+        }
 
         if (this.options.filenameSubString) {
             const ignored = {}
@@ -205,7 +226,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
             }
 
             for (const docItem of doc.docItems) {
-                md += doc.toMarkDown(docItem);
+                md += doc.toMarkDown(docItem, this.mdLinks);
                 md += linksMd;
                 md += '---' + EOL;
             }
