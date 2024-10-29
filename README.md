@@ -78,110 +78,15 @@ Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](
 
 ---
 
-#### Interface: Ts2MdOptions
-
-Options for the `Ts2Md` class which generates Typescript documentation.
+#### Interface: DocGenSupportApi
 
 ```ts
-export interface Ts2MdOptions {
-    inputFilename: string;
-    firstHeadingLevel: 1 | 2 | 3;
-    noTitle: boolean;
-    outputFilename?: string;
-    outputReplace: boolean;
-    readmeMerge: boolean;
-    nothingPrivate?: boolean;
-    filenameSubString?: string;
+export interface DocGenSupportApi {
+    printer: ts.Printer;
+    nothingPrivate: boolean;
+    headingLevelMd(relativeLevel: number): string;
 }
 ```
-
-<details>
-
-<summary>Interface Ts2MdOptions Details</summary>
-
-##### Property filenameSubString
-
-If specified, only symbols defined in files with this value as a substring
-are included in generated markdown.
-
-'/' must be used as the folder separator.
-
-```ts
-filenameSubString?: string
-```
-
-##### Property firstHeadingLevel
-
-The heading level for the first generated heading.
-
-```ts
-firstHeadingLevel: 1 | 2 | 3
-```
-
-##### Property inputFilename
-
-Primary typescript source file, default is `./src/index.ts`
-
-```ts
-inputFilename: string
-```
-
-##### Property noTitle
-
-Set to true if generated markdown will be merged into
-a file that already includes a containing header.
-
-```ts
-noTitle: boolean
-```
-
-##### Property nothingPrivate
-
-If true, overrides private typescript keywords and jsdoc tags.
-
-CAUTION: This setting is inappropriate for published documentation ;-)
-
-```ts
-nothingPrivate?: boolean
-```
-
-##### Property outputFilename
-
-If valid, a copy of the generated markdown documentation will be
-saved to this file.
-
-```ts
-outputFilename?: string
-```
-
-##### Property outputReplace
-
-Set to true to attempt to delete an existing output file before
-writing new output.
-
-```ts
-outputReplace: boolean
-```
-
-##### Property readmeMerge
-
-Set to true if the generated output should be merged into README.md
-
-Currently README.md must exist at `./README.md`
-
-and must contain the following merge start and merge end anchors:
-
-   `<!--#region ts2md-api-merged-here-->`
-
-   `<!--#endregion ts2md-api-merged-here-->`
-
-The anchors must not be indented.
-
-```ts
-readmeMerge: boolean
-```
-
-</details>
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
@@ -309,15 +214,110 @@ throws: ts.JSDocThrowsTag[]
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
 ---
-#### Interface: DocGenSupportApi
+#### Interface: Ts2MdOptions
+
+Options for the `Ts2Md` class which generates Typescript documentation.
 
 ```ts
-export interface DocGenSupportApi {
-    printer: ts.Printer;
-    nothingPrivate: boolean;
-    headingLevelMd(relativeLevel: number): string;
+export interface Ts2MdOptions {
+    inputFilename: string;
+    firstHeadingLevel: 1 | 2 | 3;
+    noTitle: boolean;
+    outputFilename?: string;
+    outputReplace: boolean;
+    readmeMerge: boolean;
+    nothingPrivate?: boolean;
+    filenameSubString?: string;
 }
 ```
+
+<details>
+
+<summary>Interface Ts2MdOptions Details</summary>
+
+##### Property filenameSubString
+
+If specified, only symbols defined in files with this value as a substring
+are included in generated markdown.
+
+'/' must be used as the folder separator.
+
+```ts
+filenameSubString?: string
+```
+
+##### Property firstHeadingLevel
+
+The heading level for the first generated heading.
+
+```ts
+firstHeadingLevel: 1 | 2 | 3
+```
+
+##### Property inputFilename
+
+Primary typescript source file, default is `./src/index.ts`
+
+```ts
+inputFilename: string
+```
+
+##### Property noTitle
+
+Set to true if generated markdown will be merged into
+a file that already includes a containing header.
+
+```ts
+noTitle: boolean
+```
+
+##### Property nothingPrivate
+
+If true, overrides private typescript keywords and jsdoc tags.
+
+CAUTION: This setting is inappropriate for published documentation ;-)
+
+```ts
+nothingPrivate?: boolean
+```
+
+##### Property outputFilename
+
+If valid, a copy of the generated markdown documentation will be
+saved to this file.
+
+```ts
+outputFilename?: string
+```
+
+##### Property outputReplace
+
+Set to true to attempt to delete an existing output file before
+writing new output.
+
+```ts
+outputReplace: boolean
+```
+
+##### Property readmeMerge
+
+Set to true if the generated output should be merged into README.md
+
+Currently README.md must exist at `./README.md`
+
+and must contain the following merge start and merge end anchors:
+
+   `<!--#region ts2md-api-merged-here-->`
+
+   `<!--#endregion ts2md-api-merged-here-->`
+
+The anchors must not be indented.
+
+```ts
+readmeMerge: boolean
+```
+
+</details>
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
@@ -339,62 +339,6 @@ Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](
 
 ---
 
-#### Class: DocItem
-
-Wrapper for a Typescript `Node` of a specific derived type,
-which is of interest for documentation generation.
-
-```ts
-export class DocItem<T extends ts.Node> {
-    jsDoc: JSDocInfo;
-    memberDocs: DocBase<ts.Node>[] = [];
-    constructor(public item: T, public name: string, public sf: ts.SourceFile, public parent?: DocItem<ts.Node>) 
-}
-```
-
-<details>
-
-<summary>Class DocItem Details</summary>
-
-##### Constructor
-
-This is really here just for demonstration / testing purposes...
-
-```ts
-constructor(public item: T, public name: string, public sf: ts.SourceFile, public parent?: DocItem<ts.Node>) 
-```
-
-Argument Details
-
-+ **item**
-  + The typescript Node for this doc item.
-+ **name**
-  + The name for this doc item.
-+ **sf**
-  + The source file which defined this item.
-
-##### Property jsDoc
-
-Parsed JSDoc information for this item
-
-```ts
-jsDoc: JSDocInfo
-```
-
-##### Property memberDocs
-
-Subsidiary documentation nodes when the node has members which
-are themselves represented as documentation nodes.
-
-```ts
-memberDocs: DocBase<ts.Node>[] = []
-```
-
-</details>
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
 #### Class: DocBase
 
 ```ts
@@ -411,9 +355,11 @@ export abstract class DocBase<T extends ts.Node> {
         len: number;
     } 
     removeTs(fromTs: string, removeTs: string, withSemi?: boolean): string 
-    toMarkDown(docItem: DocItem<T>): string 
+    toSeeAlso(docItem: DocItem<T>, mdts: string, mdLinks: Record<string, string>, tight?: boolean): string 
+    toTsMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>, tight?: boolean): string 
+    toMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>): string 
     toMarkDownTs(docItem: DocItem<T>): string 
-    toMarkDownDetails(docItem: DocItem<T>): string 
+    toMarkDownDetails(docItem: DocItem<T>, mdLinks: Record<string, string>): string 
     toMarkDownRefLink(docItem: DocItem<T>): string 
     isExportedDeclaration(item: ts.Declaration): boolean 
     argumentsDetails(docItem: DocItem<T>): string 
@@ -423,6 +369,8 @@ export abstract class DocBase<T extends ts.Node> {
     commentsDetails(docItem: DocItem<T>): string 
 }
 ```
+
+See also: [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
 
 <details>
 
@@ -441,8 +389,9 @@ Calls the `toMarkDownTs` override to add the typescript syntax code block for th
 Calls the `toMarkDownDtails` override to add any details markdown for this node.
 
 ```ts
-toMarkDown(docItem: DocItem<T>): string 
+toMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>): string 
 ```
+See also: [DocItem](#class-docitem)
 
 Returns
 
@@ -455,8 +404,9 @@ Generate the 'Details' markdown (including ) for this node.
 Base class implementation returns an empty string.
 
 ```ts
-toMarkDownDetails(docItem: DocItem<T>): string 
+toMarkDownDetails(docItem: DocItem<T>, mdLinks: Record<string, string>): string 
 ```
+See also: [DocItem](#class-docitem)
 
 ##### Method toMarkDownTs
 
@@ -471,6 +421,7 @@ implement appropriate ommission control policies.
 ```ts
 toMarkDownTs(docItem: DocItem<T>): string 
 ```
+See also: [DocItem](#class-docitem)
 
 Returns
 
@@ -481,15 +432,231 @@ typescript syntax to be added within a typescript syntax code block for this `Do
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
 ---
-#### Class: DocVariable
+#### Class: DocClass
 
 ```ts
-export class DocVariable extends DocBase<ts.VariableDeclaration> {
+export class DocClass extends DocBase<ts.ClassDeclaration> {
     constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.VariableDeclaration, sf: ts.SourceFile): string 
-    override filterItem(item: ts.Node): ts.VariableDeclaration[] 
+    override getName(item: ts.ClassDeclaration): string 
+    override filterItem(item: ts.Node): ts.ClassDeclaration[] 
+    override extractMemberDocs(docItem: DocItem<ts.ClassDeclaration>): DocBase<ts.Node>[] 
+    override toMarkDownTs(docItem: DocItem<ts.ClassDeclaration>): string 
+    override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>, mdLinks: Record<string, string>): string 
 }
 ```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocConstructor
+
+```ts
+export class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.ConstructorDeclaration): string 
+    override filterItem(item: ts.Node): ts.ConstructorDeclaration[] 
+    override toMarkDownTs(docItem: DocItem<ts.ConstructorDeclaration>): string 
+    override toMarkDownDetails(docItem: DocItem<ts.ConstructorDeclaration>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocEnum
+
+```ts
+export class DocEnum extends DocBase<ts.EnumDeclaration> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.EnumDeclaration): string 
+    override filterItem(item: ts.Node): ts.EnumDeclaration[] 
+    override extractMemberDocs(docItem: DocItem<ts.EnumDeclaration>): DocBase<ts.Node>[] 
+    override toMarkDownDetails(docItem: DocItem<ts.EnumDeclaration>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocEnumMember
+
+```ts
+export class DocEnumMember extends DocBase<ts.EnumMember> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.EnumMember): string 
+    override filterItem(item: ts.Node): ts.EnumMember[] 
+    override toMarkDownDetails(docItem: DocItem<ts.EnumMember>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocFunction
+
+```ts
+export class DocFunction extends DocBase<ts.FunctionDeclaration> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.FunctionDeclaration): string 
+    override filterItem(item: ts.Node): ts.FunctionDeclaration[] 
+    override toMarkDownTs(docItem: DocItem<ts.FunctionDeclaration>): string 
+    override toMarkDownDetails(docItem: DocItem<ts.FunctionDeclaration>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocInterface
+
+```ts
+export class DocInterface extends DocBase<ts.InterfaceDeclaration> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.InterfaceDeclaration): string 
+    override filterItem(item: ts.Node): ts.InterfaceDeclaration[] 
+    override extractMemberDocs(docItem: DocItem<ts.InterfaceDeclaration>): DocBase<ts.Node>[] 
+    override toMarkDownDetails(docItem: DocItem<ts.InterfaceDeclaration>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocItem
+
+Wrapper for a Typescript `Node` of a specific derived type,
+which is of interest for documentation generation.
+
+```ts
+export class DocItem<T extends ts.Node> {
+    jsDoc: JSDocInfo;
+    memberDocs: DocBase<ts.Node>[] = [];
+    constructor(public item: T, public name: string, public sf: ts.SourceFile, public parent?: DocItem<ts.Node>) 
+}
+```
+
+See also: [DocBase](#class-docbase), [JSDocInfo](#interface-jsdocinfo)
+
+<details>
+
+<summary>Class DocItem Details</summary>
+
+##### Constructor
+
+This is really here just for demonstration / testing purposes...
+
+```ts
+constructor(public item: T, public name: string, public sf: ts.SourceFile, public parent?: DocItem<ts.Node>) 
+```
+See also: [DocItem](#class-docitem)
+
+Argument Details
+
++ **item**
+  + The typescript Node for this doc item.
++ **name**
+  + The name for this doc item.
++ **sf**
+  + The source file which defined this item.
+
+##### Property jsDoc
+
+Parsed JSDoc information for this item
+
+```ts
+jsDoc: JSDocInfo
+```
+See also: [JSDocInfo](#interface-jsdocinfo)
+
+##### Property memberDocs
+
+Subsidiary documentation nodes when the node has members which
+are themselves represented as documentation nodes.
+
+```ts
+memberDocs: DocBase<ts.Node>[] = []
+```
+See also: [DocBase](#class-docbase)
+
+</details>
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocMethod
+
+```ts
+export class DocMethod extends DocBase<ts.MethodDeclaration> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.MethodDeclaration): string 
+    override filterItem(item: ts.Node): ts.MethodDeclaration[] 
+    override toMarkDownTs(docItem: DocItem<ts.MethodDeclaration>): string 
+    override toMarkDownDetails(docItem: DocItem<ts.MethodDeclaration>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocMethodSignature
+
+```ts
+export class DocMethodSignature extends DocBase<ts.MethodSignature> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.MethodSignature): string 
+    override filterItem(item: ts.Node): ts.MethodSignature[] 
+    override toMarkDownTs(docItem: DocItem<ts.MethodSignature>): string 
+    override toMarkDownDetails(docItem: DocItem<ts.MethodSignature>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocProperty
+
+```ts
+export class DocProperty extends DocBase<ts.PropertyDeclaration> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.PropertyDeclaration): string 
+    override filterItem(item: ts.Node): ts.PropertyDeclaration[] 
+    override toMarkDownDetails(docItem: DocItem<ts.PropertyDeclaration>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
+
+Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
+
+---
+#### Class: DocPropertySignature
+
+```ts
+export class DocPropertySignature extends DocBase<ts.PropertySignature> {
+    constructor(sup: DocGenSupportApi) 
+    override getName(item: ts.PropertySignature): string 
+    override filterItem(item: ts.Node): ts.PropertySignature[] 
+    override toMarkDownDetails(docItem: DocItem<ts.PropertySignature>, mdLinks: Record<string, string>): string 
+}
+```
+
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi), [DocItem](#class-docitem)
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
@@ -504,153 +671,22 @@ export class DocType extends DocBase<ts.TypeAliasDeclaration> {
 }
 ```
 
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocFunction
-
-```ts
-export class DocFunction extends DocBase<ts.FunctionDeclaration> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.FunctionDeclaration): string 
-    override filterItem(item: ts.Node): ts.FunctionDeclaration[] 
-    override toMarkDownTs(docItem: DocItem<ts.FunctionDeclaration>): string 
-    override toMarkDownDetails(docItem: DocItem<ts.FunctionDeclaration>): string 
-}
-```
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi)
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
 ---
-#### Class: DocProperty
+#### Class: DocVariable
 
 ```ts
-export class DocProperty extends DocBase<ts.PropertyDeclaration> {
+export class DocVariable extends DocBase<ts.VariableDeclaration> {
     constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.PropertyDeclaration): string 
-    override filterItem(item: ts.Node): ts.PropertyDeclaration[] 
-    override toMarkDownDetails(docItem: DocItem<ts.PropertyDeclaration>): string 
+    override getName(item: ts.VariableDeclaration, sf: ts.SourceFile): string 
+    override filterItem(item: ts.Node): ts.VariableDeclaration[] 
 }
 ```
 
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocConstructor
-
-```ts
-export class DocConstructor extends DocBase<ts.ConstructorDeclaration> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.ConstructorDeclaration): string 
-    override filterItem(item: ts.Node): ts.ConstructorDeclaration[] 
-    override toMarkDownTs(docItem: DocItem<ts.ConstructorDeclaration>): string 
-    override toMarkDownDetails(docItem: DocItem<ts.ConstructorDeclaration>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocMethod
-
-```ts
-export class DocMethod extends DocBase<ts.MethodDeclaration> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.MethodDeclaration): string 
-    override filterItem(item: ts.Node): ts.MethodDeclaration[] 
-    override toMarkDownTs(docItem: DocItem<ts.MethodDeclaration>): string 
-    override toMarkDownDetails(docItem: DocItem<ts.MethodDeclaration>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocClass
-
-```ts
-export class DocClass extends DocBase<ts.ClassDeclaration> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.ClassDeclaration): string 
-    override filterItem(item: ts.Node): ts.ClassDeclaration[] 
-    override extractMemberDocs(docItem: DocItem<ts.ClassDeclaration>): DocBase<ts.Node>[] 
-    override toMarkDownTs(docItem: DocItem<ts.ClassDeclaration>): string 
-    override toMarkDownDetails(docItem: DocItem<ts.ClassDeclaration>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocPropertySignature
-
-```ts
-export class DocPropertySignature extends DocBase<ts.PropertySignature> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.PropertySignature): string 
-    override filterItem(item: ts.Node): ts.PropertySignature[] 
-    override toMarkDownDetails(docItem: DocItem<ts.PropertySignature>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocMethodSignature
-
-```ts
-export class DocMethodSignature extends DocBase<ts.MethodSignature> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.MethodSignature): string 
-    override filterItem(item: ts.Node): ts.MethodSignature[] 
-    override toMarkDownTs(docItem: DocItem<ts.MethodSignature>): string 
-    override toMarkDownDetails(docItem: DocItem<ts.MethodSignature>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocInterface
-
-```ts
-export class DocInterface extends DocBase<ts.InterfaceDeclaration> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.InterfaceDeclaration): string 
-    override filterItem(item: ts.Node): ts.InterfaceDeclaration[] 
-    override extractMemberDocs(docItem: DocItem<ts.InterfaceDeclaration>): DocBase<ts.Node>[] 
-    override toMarkDownDetails(docItem: DocItem<ts.InterfaceDeclaration>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocEnumMember
-
-```ts
-export class DocEnumMember extends DocBase<ts.EnumMember> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.EnumMember): string 
-    override filterItem(item: ts.Node): ts.EnumMember[] 
-    override toMarkDownDetails(docItem: DocItem<ts.EnumMember>): string 
-}
-```
-
-Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
-
----
-#### Class: DocEnum
-
-```ts
-export class DocEnum extends DocBase<ts.EnumDeclaration> {
-    constructor(sup: DocGenSupportApi) 
-    override getName(item: ts.EnumDeclaration): string 
-    override filterItem(item: ts.Node): ts.EnumDeclaration[] 
-    override extractMemberDocs(docItem: DocItem<ts.EnumDeclaration>): DocBase<ts.Node>[] 
-    override toMarkDownDetails(docItem: DocItem<ts.EnumDeclaration>): string 
-}
-```
+See also: [DocBase](#class-docbase), [DocGenSupportApi](#interface-docgensupportapi)
 
 Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](#functions)
 
@@ -693,6 +729,8 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
 }
 ```
 
+See also: [DocGenSupportApi](#interface-docgensupportapi), [Ts2MdOptions](#interface-ts2mdoptions)
+
 <details>
 
 <summary>Class TypescriptToMarkdown Details</summary>
@@ -704,6 +742,7 @@ Construct a new instance configured for `run` method to be called next.
 ```ts
 constructor(public options: Ts2MdOptions) 
 ```
+See also: [Ts2MdOptions](#interface-ts2mdoptions)
 
 Argument Details
 
@@ -898,6 +937,8 @@ export function ts2md(options?: Ts2MdOptions): void {
     new TypescriptToMarkdown(options).run();
 }
 ```
+
+See also: [Ts2MdOptions](#interface-ts2mdoptions), [TypescriptToMarkdown](#class-typescripttomarkdown)
 
 <details>
 
