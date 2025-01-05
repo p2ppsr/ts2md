@@ -2,6 +2,7 @@
  * Options for the `Ts2Md` class which generates Typescript documentation.
  */
 export interface Ts2MdOptions {
+    options?: Ts2MdOptions[]
     /**
      * Primary typescript source file, default is `./src/index.ts`
      */

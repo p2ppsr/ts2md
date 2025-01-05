@@ -54,42 +54,51 @@ export function ts2md(options?: Ts2MdOptions) : void {
             options = <Ts2MdOptions>JSON.parse(json)
         } catch {/* */}
     }
-    options ||= {
-        inputFilename: './src/index.ts',
-        outputFilename: '',
-        firstHeadingLevel: 2,
-        noTitle: true,
-        outputReplace: true,
-        readmeMerge: true,
-        //nothingPrivate: true
-    }
-    const args = process.argv
-    for (let i = 0; i < args.length; i++) {
-        const arg = args[i]
-        if (!arg.startsWith('--')) continue
-        const e = arg.indexOf('=')
-        let a = '', v = ''
-        if (e > -1) {
-            a = arg.slice(2, e)
-            v = arg.slice(e + 1)
-        } else {
-            a = arg.slice(2)
-            v = args[++i]
+    if (!options?.options) {
+        options ||= {
+            inputFilename: './src/index.ts',
+            outputFilename: '',
+            firstHeadingLevel: 2,
+            noTitle: true,
+            outputReplace: true,
+            readmeMerge: true,
+            //nothingPrivate: true
         }
-        switch (a) {
-            case 'inputFilename': options.inputFilename = v; break
-            case 'outputFilename': options.outputFilename = v; break
-            case 'firstHeadingLevel': options.firstHeadingLevel = <1 | 2 | 3>Number(v); break
-            case 'noTitle': options.noTitle = (v === 'true'); break
-            case 'outputReplace': options.outputReplace = (v === 'true'); break
-            case 'readmeMerge': options.readmeMerge = (v === 'true'); break
-            case 'nothingPrivate': options.nothingPrivate = (v === 'true'); break
-            case 'filenameSubString': options.filenameSubString = v; break
-            default: break
+        const args = process.argv
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i]
+            if (!arg.startsWith('--')) continue
+            const e = arg.indexOf('=')
+            let a = '', v = ''
+            if (e > -1) {
+                a = arg.slice(2, e)
+                v = arg.slice(e + 1)
+            } else {
+                a = arg.slice(2)
+                v = args[++i]
+            }
+            switch (a) {
+                case 'inputFilename': options.inputFilename = v; break
+                case 'outputFilename': options.outputFilename = v; break
+                case 'firstHeadingLevel': options.firstHeadingLevel = <1 | 2 | 3>Number(v); break
+                case 'noTitle': options.noTitle = (v === 'true'); break
+                case 'outputReplace': options.outputReplace = (v === 'true'); break
+                case 'readmeMerge': options.readmeMerge = (v === 'true'); break
+                case 'nothingPrivate': options.nothingPrivate = (v === 'true'); break
+                case 'filenameSubString': options.filenameSubString = v; break
+                default: break
+            }
         }
+        console.log('ts2md(', options, ')')
+    } else {
+        console.log('ts2md command line ignored.\nts2md(', options, ')')
     }
-    console.log('ts2md(', options, ')')
-    new TypescriptToMarkdown(options).run()
+    if (options.options) {
+        for (const o of options.options)
+            new TypescriptToMarkdown(o).run()
+    } else {
+        new TypescriptToMarkdown(options).run()
+    }
 }
 
 ts2md()
