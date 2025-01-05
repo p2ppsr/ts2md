@@ -1,6 +1,6 @@
 {
   "name": "ts2md",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Simple Typescript Documentation Generator to GitHub Compatible MarkDown",
   "author": "Tone Engel",
   "license": "Open BSV",
