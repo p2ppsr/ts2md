@@ -1,5 +1,4 @@
 import { EOL } from "os"
-import * as fs from "fs";
 import * as path from "path";
 import ts from "typescript";
 import { mdMerge } from "./mdMerge";
@@ -116,10 +115,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         this.docs = this.extractDocs(this.sourceFiles);
         this.markDown = this.generateMarkDown(this.docs);
         if (this.markDown) {
-            if (this.options.outputFilename)
-                this.outputPath = this.writeMarkDownToOuput(this.markDown, this.options.outputFilename);
-            if (this.options.readmeMerge)
-                this.readmeMerge(this.markDown);
+            mdMerge(this.markDown, this.options.outputFilename || './README.md', !this.options.outputFilename)
         }
     }
 
@@ -264,19 +260,4 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         }
         return md;
     }
-
-    private writeMarkDownToOuput(markDown: string, outputFilename: string): string {
-        const outputPath = path.resolve(outputFilename);
-        if (this.options.outputReplace) {
-            try { fs.unlinkSync(outputPath); } catch { /* */ }
-        }
-        fs.writeFileSync(outputPath, markDown);
-
-        return outputPath;
-    }
-
-    private readmeMerge(markDown: string) {
-        mdMerge(markDown);
-    }
-
 }

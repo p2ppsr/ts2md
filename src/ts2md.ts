@@ -60,7 +60,6 @@ export function ts2md(options?: Ts2MdOptions) : void {
             outputFilename: '',
             firstHeadingLevel: 2,
             noTitle: true,
-            outputReplace: true,
             readmeMerge: true,
             //nothingPrivate: true
         }
@@ -82,7 +81,6 @@ export function ts2md(options?: Ts2MdOptions) : void {
                 case 'outputFilename': options.outputFilename = v; break
                 case 'firstHeadingLevel': options.firstHeadingLevel = <1 | 2 | 3>Number(v); break
                 case 'noTitle': options.noTitle = (v === 'true'); break
-                case 'outputReplace': options.outputReplace = (v === 'true'); break
                 case 'readmeMerge': options.readmeMerge = (v === 'true'); break
                 case 'nothingPrivate': options.nothingPrivate = (v === 'true'); break
                 case 'filenameSubString': options.filenameSubString = v; break

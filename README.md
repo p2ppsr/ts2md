@@ -220,11 +220,11 @@ Options for the `Ts2Md` class which generates Typescript documentation.
 
 ```ts
 export interface Ts2MdOptions {
+    options?: Ts2MdOptions[];
     inputFilename: string;
     firstHeadingLevel: 1 | 2 | 3;
     noTitle: boolean;
     outputFilename?: string;
-    outputReplace: boolean;
     readmeMerge: boolean;
     nothingPrivate?: boolean;
     filenameSubString?: string;
@@ -288,15 +288,6 @@ saved to this file.
 
 ```ts
 outputFilename?: string
-```
-
-##### Property outputReplace
-
-Set to true to attempt to delete an existing output file before
-writing new output.
-
-```ts
-outputReplace: boolean
 ```
 
 ##### Property readmeMerge
@@ -817,16 +808,22 @@ The anchors must not be indented and must exactly match:
    `<!--#endregion ts2md-api-merged-here-->`
 
 ```ts
-export function mdMerge(md: string) 
+export function mdMerge(md: string, file = "./README.md", requireAnchors = true): string 
 ```
 
 <details>
 
 <summary>Function mdMerge Details</summary>
 
+Returns
+
+resolved path of file written or updated.
+
 Argument Details
 
 + **md**
+  + The markdown to insert between the start and end anchors.
++ **file**
   + The markdown to insert between the start and end anchors.
 
 </details>
@@ -882,59 +879,66 @@ export function ts2md(options?: Ts2MdOptions): void {
         }
         catch { }
     }
-    options ||= {
-        inputFilename: "./src/index.ts",
-        outputFilename: "",
-        firstHeadingLevel: 2,
-        noTitle: true,
-        outputReplace: true,
-        readmeMerge: true,
-    };
-    const args = process.argv;
-    for (let i = 0; i < args.length; i++) {
-        const arg = args[i];
-        if (!arg.startsWith("--"))
-            continue;
-        const e = arg.indexOf("=");
-        let a = "", v = "";
-        if (e > -1) {
-            a = arg.slice(2, e);
-            v = arg.slice(e + 1);
+    if (!options?.options) {
+        options ||= {
+            inputFilename: "./src/index.ts",
+            outputFilename: "",
+            firstHeadingLevel: 2,
+            noTitle: true,
+            readmeMerge: true,
+        };
+        const args = process.argv;
+        for (let i = 0; i < args.length; i++) {
+            const arg = args[i];
+            if (!arg.startsWith("--"))
+                continue;
+            const e = arg.indexOf("=");
+            let a = "", v = "";
+            if (e > -1) {
+                a = arg.slice(2, e);
+                v = arg.slice(e + 1);
+            }
+            else {
+                a = arg.slice(2);
+                v = args[++i];
+            }
+            switch (a) {
+                case "inputFilename":
+                    options.inputFilename = v;
+                    break;
+                case "outputFilename":
+                    options.outputFilename = v;
+                    break;
+                case "firstHeadingLevel":
+                    options.firstHeadingLevel = <1 | 2 | 3>Number(v);
+                    break;
+                case "noTitle":
+                    options.noTitle = (v === "true");
+                    break;
+                case "readmeMerge":
+                    options.readmeMerge = (v === "true");
+                    break;
+                case "nothingPrivate":
+                    options.nothingPrivate = (v === "true");
+                    break;
+                case "filenameSubString":
+                    options.filenameSubString = v;
+                    break;
+                default: break;
+            }
         }
-        else {
-            a = arg.slice(2);
-            v = args[++i];
-        }
-        switch (a) {
-            case "inputFilename":
-                options.inputFilename = v;
-                break;
-            case "outputFilename":
-                options.outputFilename = v;
-                break;
-            case "firstHeadingLevel":
-                options.firstHeadingLevel = <1 | 2 | 3>Number(v);
-                break;
-            case "noTitle":
-                options.noTitle = (v === "true");
-                break;
-            case "outputReplace":
-                options.outputReplace = (v === "true");
-                break;
-            case "readmeMerge":
-                options.readmeMerge = (v === "true");
-                break;
-            case "nothingPrivate":
-                options.nothingPrivate = (v === "true");
-                break;
-            case "filenameSubString":
-                options.filenameSubString = v;
-                break;
-            default: break;
-        }
+        console.log("ts2md(", options, ")");
     }
-    console.log("ts2md(", options, ")");
-    new TypescriptToMarkdown(options).run();
+    else {
+        console.log("ts2md command line ignored.\nts2md(", options, ")");
+    }
+    if (options.options) {
+        for (const o of options.options)
+            new TypescriptToMarkdown(o).run();
+    }
+    else {
+        new TypescriptToMarkdown(options).run();
+    }
 }
 ```
 

@@ -29,6 +29,7 @@
   "scripts": {
     "build": "tsc --build",
     "build:readme": "npm run build && node ./out/src/ts2md.js",
+    "doc": "npm run build:readme",
     "test": "npm run build && node out/src/ts2md.js --outputFilename=./test/nested/apiDoc.md",
     "test:enum": "npm run build && node out/src/ts2md.js --inputFilename ./test/enum.test.ts --outputFilename ./test/nested/enum.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",
     "test:function": "npm run build && node out/src/ts2md.js --inputFilename ./test/function.test.ts --outputFilename ./test/nested/function.test.md --firstHeadingLevel 1 --noTitle false --readmeMerge false",

@@ -22,11 +22,6 @@ export interface Ts2MdOptions {
      */
     outputFilename?: string;
     /**
-     * Set to true to attempt to delete an existing output file before
-     * writing new output.
-     */
-    outputReplace: boolean;
-    /**
      * Set to true if the generated output should be merged into README.md
      *
      * Currently README.md must exist at `./README.md`

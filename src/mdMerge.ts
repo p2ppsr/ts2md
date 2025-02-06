@@ -12,11 +12,19 @@ import { EOL } from "os"
  *    `<!--#endregion ts2md-api-merged-here-->`
  * 
  * @param md The markdown to insert between the start and end anchors.
+ * @param file The markdown to insert between the start and end anchors.
+ * @returns resolved path of file written or updated.
  */
-export function mdMerge(md: string) {
-    const mergePath = path.resolve('./README.md')
+export function mdMerge(md: string, file = './README.md', requireAnchors = true) : string {
+    const mergePath = path.resolve(file)
 
-    const preMergeMd = fs.readFileSync(mergePath, { encoding: 'utf8' })
+    let preMergeMd: string
+    try {
+        preMergeMd = fs.readFileSync(mergePath, { encoding: 'utf8' })
+    } catch {
+        fs.writeFileSync(mergePath, md);
+        return mergePath
+    }
     
     const mergeStartAnchor = `<!--#region ts2md-api-merged-here-->`
     const mergeEndAnchor = `<!--#endregion ts2md-api-merged-here-->`
@@ -32,7 +40,7 @@ export function mdMerge(md: string) {
          preMergeMd.slice(posEnd)
         try { fs.unlinkSync(mergePath) } catch { /* */ }
         fs.writeFileSync(mergePath, mergedMd)
-    } else {
+    } else if (requireAnchors) {
         console.error(`
 ts2md anchors missing or inverted in README.md
 
@@ -42,5 +50,9 @@ Be sure to add exactly:
 <!--#endregion ts2md-api-merged-here-->
 
 `)
+    } else {
+        try { fs.unlinkSync(mergePath); } catch { /* */ }
+        fs.writeFileSync(mergePath, md);
     }
+    return mergePath
 }
