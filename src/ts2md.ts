@@ -61,6 +61,7 @@ export function ts2md(options?: Ts2MdOptions) : void {
             firstHeadingLevel: 2,
             noTitle: true,
             readmeMerge: true,
+            noDetailsSummary: false
             //nothingPrivate: true
         }
         const args = process.argv
@@ -84,6 +85,7 @@ export function ts2md(options?: Ts2MdOptions) : void {
                 case 'readmeMerge': options.readmeMerge = (v === 'true'); break
                 case 'nothingPrivate': options.nothingPrivate = (v === 'true'); break
                 case 'filenameSubString': options.filenameSubString = v; break
+                case 'noDetailsSummary': options.noDetailsSummary = (v === 'true'); break
                 default: break
             }
         }

@@ -48,6 +48,8 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
      */
     private mdLinks: Record<string, string> = {}
 
+    noDetailsSummary: boolean;
+
     /**
      * @private
      */
@@ -79,6 +81,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
         
         options.inputFilename ||= './src/index.ts';
         this.nothingPrivate = options.nothingPrivate || false;
+        this.noDetailsSummary = options.noDetailsSummary || false;
 
         this.filePath = path.resolve(options.inputFilename);
         this.fileName = path.parse(this.filePath).name;

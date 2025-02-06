@@ -48,4 +48,11 @@ export interface Ts2MdOptions {
      * '/' must be used as the folder separator.
      */
     filenameSubString?: string
+    /**
+     * GitHub Pages, and other consumers of markdown, may not support the
+     * <details> and <summary> tags embedded in markdown.
+     * 
+     * Set `noDetailsSummary` to true to skip wrapping details with this tag.
+     */
+    noDetailsSummary?: boolean
 }

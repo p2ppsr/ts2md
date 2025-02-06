@@ -179,6 +179,7 @@ export class DocItem<T extends ts.Node> {
 export interface DocGenSupportApi {
     printer: ts.Printer
     nothingPrivate: boolean
+    noDetailsSummary: boolean
     headingLevelMd(relativeLevel: number) : string
 }
 
@@ -302,24 +303,27 @@ export abstract class DocBase<T extends ts.Node> {
      * 
      * @returns the generated markdown for this `DocItem`
      */
-    toMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>) : string {
-       let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}` + EOL + EOL
+    toMarkDown(docItem: DocItem<T>, mdLinks: Record<string, string>): string {
+        let md = `${this.sup.headingLevelMd(3)} ${this.label}: ${docItem.name}` + EOL + EOL
 
-       md += this.commentsDetails(docItem)
-       
-       md += this.examplesDetails(docItem)
-       
-       md += this.toTsMarkDown(docItem, mdLinks)
+        md += this.commentsDetails(docItem)
 
-       const details = this.toMarkDownDetails(docItem, mdLinks) 
-       if (details) {
-            md += `<details>${EOL}${EOL}<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>` + EOL + EOL
-            md += details
-            md += `</details>` + EOL + EOL
-       }
+        md += this.examplesDetails(docItem)
 
+        md += this.toTsMarkDown(docItem, mdLinks)
 
-       return md
+        const details = this.toMarkDownDetails(docItem, mdLinks)
+        if (details) {
+            if (this.sup.noDetailsSummary) {
+                md += details
+            } else {
+                md += `<details>${EOL}${EOL}<summary>${this.label} ${docItem.name} ${this.detailsLabel}</summary>` + EOL + EOL
+                md += details
+                md += `</details>` + EOL + EOL
+            }
+        }
+
+        return md
     }
 
     /**
