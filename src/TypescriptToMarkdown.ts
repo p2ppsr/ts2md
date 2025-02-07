@@ -47,6 +47,10 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
      * For each symbol name, the markdown link which will exist in this document.
      */
     private mdLinks: Record<string, string> = {}
+    /**
+     * mdLinks that are not defined in the current outputPath
+     */
+    private mdLinksExternal: Record<string, string> = {}
 
     noDetailsSummary: boolean;
 
@@ -77,7 +81,7 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
      *
      * @param options Must be provided. inputFilename defaults to `./src/index.ts`
      */
-    constructor(public options: Ts2MdOptions) {
+    constructor(public options: Ts2MdOptions, public mdLinksEx?: Record<string, string>) {
         
         options.inputFilename ||= './src/index.ts';
         this.nothingPrivate = options.nothingPrivate || false;
@@ -113,12 +117,19 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
      * Generates the documentation markdown and write's it to output file
      * and/or merges it to README.md
      */
-    run(): void {
+    run(): { outputPath: string, mdLinks: Record<string, string>, mdLinksExternal: Record<string, string> } {
+        this.outputPath = path.resolve(this.options.outputFilename || './README.md')
+        const requireAnchors = !this.options.outputFilename
         this.sourceFiles = this.parseSourceFiles(this.program);
         this.docs = this.extractDocs(this.sourceFiles);
         this.markDown = this.generateMarkDown(this.docs);
         if (this.markDown) {
-            mdMerge(this.markDown, this.options.outputFilename || './README.md', !this.options.outputFilename)
+            mdMerge(this.markDown, this.outputPath, requireAnchors)
+        }
+        return {
+            outputPath: this.outputPath,
+            mdLinks: this.mdLinks,
+            mdLinksExternal: this.mdLinksExternal
         }
     }
 
@@ -164,15 +175,16 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
     private generateMarkDown(docs: DocBase<ts.Node>[]): string {
         let md = '';
         this.mdLinks = {}
+        this.mdLinksExternal = {}
 
-
-        for (const doc of this.docs) {
-            for (const docItem of doc.docItems) {
-                const linkMd = doc.toMarkDownRefLink(docItem)
-                this.mdLinks[docItem.name] = linkMd
-            }
+        const contributesToOutput = (docItem: DocItem<ts.Node>): boolean => {
+            if (!this.options.filenameSubString)
+                return true
+            const fn = docItem.sf.fileName
+            const add = fn.indexOf(this.options.filenameSubString || '') > -1
+            return add
         }
- 
+
         // Sort docItems by name
         for (const doc of docs) {
             doc.docItems = doc.docItems.sort((a, b) => {
@@ -180,26 +192,24 @@ export class TypescriptToMarkdown implements DocGenSupportApi {
             })
         }
 
-        if (this.options.filenameSubString) {
-            const ignored = {}
-            for (const doc of this.docs) {
-                const filteredItems: DocItem<ts.Node>[] = []
-                for (const docItem of doc.docItems) {
-                    const fn = docItem.sf.fileName
-                    const add = fn.indexOf(this.options.filenameSubString || '') > -1
-                    if (add) {
-                        filteredItems.push(docItem)
-                        //console.log(`Adding ${fn} ${docItem.name}`)
-                    } else {
-                        if (!ignored[fn]) {
-                            //console.log(`Ignoring ${fn}`)
-                            ignored[docItem.sf.fileName] = true
-                        }
-                    }
+        for (const doc of this.docs) {
+            const filteredItems: DocItem<ts.Node>[] = []
+            for (const docItem of doc.docItems) {
+                const linkMd = doc.toMarkDownRefLink(docItem)
+                if (contributesToOutput(docItem)) {
+                    this.mdLinks[docItem.name] = linkMd
+                    filteredItems.push(docItem)
+                    //console.log(`Adding ${fn} ${docItem.name}`)
+                } else {
+                    if (!this.mdLinksExternal[docItem.name])
+                        this.mdLinksExternal[docItem.name] = linkMd
                 }
-                doc.docItems = filteredItems
             }
+            doc.docItems = filteredItems
         }
+
+        if (this.mdLinksEx)
+            this.mdLinks = this.mdLinksEx
 
         if (!this.options.noTitle) {
             md += `${this.headingLevelMd(1)} API${EOL}${EOL}`;

@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as path from "path";
 import { EOL } from "os"
 
 /**
@@ -12,18 +11,16 @@ import { EOL } from "os"
  *    `<!--#endregion ts2md-api-merged-here-->`
  * 
  * @param md The markdown to insert between the start and end anchors.
- * @param file The markdown to insert between the start and end anchors.
- * @returns resolved path of file written or updated.
+ * @param mergePath Fully resolved path to create or update.
  */
-export function mdMerge(md: string, file = './README.md', requireAnchors = true) : string {
-    const mergePath = path.resolve(file)
+export function mdMerge(md: string, mergePath: string, requireAnchors = true) : void {
 
     let preMergeMd: string
     try {
         preMergeMd = fs.readFileSync(mergePath, { encoding: 'utf8' })
     } catch {
         fs.writeFileSync(mergePath, md);
-        return mergePath
+        return
     }
     
     const mergeStartAnchor = `<!--#region ts2md-api-merged-here-->`
@@ -54,5 +51,4 @@ Be sure to add exactly:
         try { fs.unlinkSync(mergePath); } catch { /* */ }
         fs.writeFileSync(mergePath, md);
     }
-    return mergePath
 }

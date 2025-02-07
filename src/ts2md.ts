@@ -94,8 +94,21 @@ export function ts2md(options?: Ts2MdOptions) : void {
         console.log('ts2md command line ignored.\nts2md(', options, ')')
     }
     if (options.options) {
-        for (const o of options.options)
-            new TypescriptToMarkdown(o).run()
+        const mdLinksEx: Record<string, string> = {}
+        for (const o of options.options) {
+            const t = new TypescriptToMarkdown(o)
+            const r = t.run()
+            const base = path.parse(r.outputPath).base
+            for (const [key, mdLink] of Object.entries(r.mdLinks)) {
+                if (!mdLinksEx[key]) {
+                    mdLinksEx[key] = mdLink.replace('(#', `(./${base}#`)
+                }
+            }
+        }
+        for (const o of options.options) {
+            const t = new TypescriptToMarkdown(o, mdLinksEx)
+            t.run()
+        }
     } else {
         new TypescriptToMarkdown(options).run()
     }
