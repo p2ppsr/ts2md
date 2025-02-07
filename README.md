@@ -84,6 +84,7 @@ Links: [API](#api), [Interfaces](#interfaces), [Classes](#classes), [Functions](
 export interface DocGenSupportApi {
     printer: ts.Printer;
     nothingPrivate: boolean;
+    noDetailsSummary: boolean;
     headingLevelMd(relativeLevel: number): string;
 }
 ```
@@ -228,6 +229,7 @@ export interface Ts2MdOptions {
     readmeMerge: boolean;
     nothingPrivate?: boolean;
     filenameSubString?: string;
+    noDetailsSummary?: boolean;
 }
 ```
 
@@ -260,6 +262,17 @@ Primary typescript source file, default is `./src/index.ts`
 
 ```ts
 inputFilename: string
+```
+
+##### Property noDetailsSummary
+
+GitHub Pages, and other consumers of markdown, may not support the
+<details> and <summary> tags embedded in markdown.
+
+Set `noDetailsSummary` to true to skip wrapping details with this tag.
+
+```ts
+noDetailsSummary?: boolean
 ```
 
 ##### Property noTitle
@@ -711,12 +724,17 @@ The following JSDoc tags are supported:
 
 ```ts
 export class TypescriptToMarkdown implements DocGenSupportApi {
+    noDetailsSummary: boolean;
     filePath: string;
     fileName: string;
     markDown?: string;
     outputPath?: string;
-    constructor(public options: Ts2MdOptions) 
-    run(): void 
+    constructor(public options: Ts2MdOptions, public mdLinksEx?: Record<string, string>) 
+    run(): {
+        outputPath: string;
+        mdLinks: Record<string, string>;
+        mdLinksExternal: Record<string, string>;
+    } 
 }
 ```
 
@@ -731,7 +749,7 @@ See also: [DocGenSupportApi](#interface-docgensupportapi), [Ts2MdOptions](#inter
 Construct a new instance configured for `run` method to be called next.
 
 ```ts
-constructor(public options: Ts2MdOptions) 
+constructor(public options: Ts2MdOptions, public mdLinksEx?: Record<string, string>) 
 ```
 See also: [Ts2MdOptions](#interface-ts2mdoptions)
 
@@ -778,7 +796,11 @@ Generates the documentation markdown and write's it to output file
 and/or merges it to README.md
 
 ```ts
-run(): void 
+run(): {
+    outputPath: string;
+    mdLinks: Record<string, string>;
+    mdLinksExternal: Record<string, string>;
+} 
 ```
 
 </details>
@@ -808,23 +830,19 @@ The anchors must not be indented and must exactly match:
    `<!--#endregion ts2md-api-merged-here-->`
 
 ```ts
-export function mdMerge(md: string, file = "./README.md", requireAnchors = true): string 
+export function mdMerge(md: string, mergePath: string, requireAnchors = true): void 
 ```
 
 <details>
 
 <summary>Function mdMerge Details</summary>
 
-Returns
-
-resolved path of file written or updated.
-
 Argument Details
 
 + **md**
   + The markdown to insert between the start and end anchors.
-+ **file**
-  + The markdown to insert between the start and end anchors.
++ **mergePath**
+  + Fully resolved path to create or update.
 
 </details>
 
@@ -886,6 +904,7 @@ export function ts2md(options?: Ts2MdOptions): void {
             firstHeadingLevel: 2,
             noTitle: true,
             readmeMerge: true,
+            noDetailsSummary: false
         };
         const args = process.argv;
         for (let i = 0; i < args.length; i++) {
@@ -924,6 +943,9 @@ export function ts2md(options?: Ts2MdOptions): void {
                 case "filenameSubString":
                     options.filenameSubString = v;
                     break;
+                case "noDetailsSummary":
+                    options.noDetailsSummary = (v === "true");
+                    break;
                 default: break;
             }
         }
@@ -933,8 +955,21 @@ export function ts2md(options?: Ts2MdOptions): void {
         console.log("ts2md command line ignored.\nts2md(", options, ")");
     }
     if (options.options) {
-        for (const o of options.options)
-            new TypescriptToMarkdown(o).run();
+        const mdLinksEx: Record<string, string> = {};
+        for (const o of options.options) {
+            const t = new TypescriptToMarkdown(o);
+            const r = t.run();
+            const base = path.parse(r.outputPath).base;
+            for (const [key, mdLink] of Object.entries(r.mdLinks)) {
+                if (!mdLinksEx[key]) {
+                    mdLinksEx[key] = mdLink.replace("(#", `(./${base}#`);
+                }
+            }
+        }
+        for (const o of options.options) {
+            const t = new TypescriptToMarkdown(o, mdLinksEx);
+            t.run();
+        }
     }
     else {
         new TypescriptToMarkdown(options).run();
